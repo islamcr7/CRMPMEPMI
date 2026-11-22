@@ -4,13 +4,14 @@ import { CheckCircle2, ChevronRight, Circle, Rocket, X } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import type { Dashboard } from '../types';
 
+import { t } from '../lib/i18n';
 const STEPS: { key: keyof Dashboard['setup']; label: string; hint: string; to: string; admin?: boolean }[] = [
-  { key: 'orgConfigured', label: 'Renseigner votre entreprise', hint: 'Nom, adresse, TVA : repris sur vos devis et factures', to: '/settings', admin: true },
-  { key: 'contacts', label: 'Ajouter ou importer vos contacts', hint: 'Import CSV depuis Excel ou un autre CRM', to: '/contacts' },
-  { key: 'products', label: 'Créer votre catalogue', hint: 'Vos produits et prestations, réutilisables dans les devis', to: '/products' },
-  { key: 'deals', label: 'Suivre une première opportunité', hint: 'Faites-la avancer étape par étape dans le pipeline', to: '/pipeline' },
-  { key: 'quotes', label: 'Envoyer un premier devis', hint: 'Transformez-le en facture en un clic une fois accepté', to: '/documents/new/QUOTE' },
-  { key: 'team', label: 'Inviter votre équipe', hint: 'Chaque commercial a son propre accès', to: '/users', admin: true },
+  { key: 'orgConfigured', label: t('Renseigner votre entreprise'), hint: t('Nom, adresse, TVA : repris sur vos devis et factures'), to: '/settings', admin: true },
+  { key: 'contacts', label: t('Ajouter ou importer vos contacts'), hint: t('Import CSV depuis Excel ou un autre CRM'), to: '/contacts' },
+  { key: 'products', label: t('Créer votre catalogue'), hint: t('Vos produits et prestations, réutilisables dans les devis'), to: '/products' },
+  { key: 'deals', label: t('Suivre une première opportunité'), hint: t('Faites-la avancer étape par étape dans le pipeline'), to: '/pipeline' },
+  { key: 'quotes', label: t('Envoyer un premier devis'), hint: t('Transformez-le en facture en un clic une fois accepté'), to: '/documents/new/QUOTE' },
+  { key: 'team', label: t('Inviter votre équipe'), hint: t('Chaque commercial a son propre accès'), to: '/users', admin: true },
 ];
 
 /** Guide « Premiers pas » : se masque une fois terminé ou fermé. */
@@ -47,14 +48,14 @@ export function GettingStarted({ setup }: { setup: Dashboard['setup'] }) {
           </div>
           <div>
             <h2 id="onboarding-title" className="text-sm font-semibold text-slate-900">
-              Premiers pas
+              {t("Premiers pas")}
             </h2>
             <p className="text-xs text-slate-600">
-              {done} sur {steps.length} étapes terminées
+              {done} {t("sur")} {steps.length} {t("étapes terminées")}
             </p>
           </div>
         </div>
-        <button onClick={dismiss} className="rounded p-1 text-slate-400 hover:bg-white hover:text-slate-600" aria-label="Masquer le guide" title="Masquer le guide">
+        <button onClick={dismiss} className="rounded p-1 text-slate-400 hover:bg-white hover:text-slate-600" aria-label={t("Masquer le guide")} title={t("Masquer le guide")}>
           <X className="h-4 w-4" />
         </button>
       </div>

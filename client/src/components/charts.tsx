@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { BarChart3, Table2 } from 'lucide-react';
 
+import { t } from '../lib/i18n';
 /* ======================================================================
  * Graphiques SVG légers (aucune dépendance).
  * Règles appliquées : un seul axe, grille discrète, barres fines à bout
@@ -69,7 +70,7 @@ export function ViewToggle({ table, onChange }: { table: boolean; onChange: (t: 
       aria-pressed={table}
     >
       {table ? <BarChart3 className="h-3.5 w-3.5" /> : <Table2 className="h-3.5 w-3.5" />}
-      {table ? 'Graphique' : 'Tableau'}
+      {table ? t('Graphique') : t('Tableau')}
     </button>
   );
 }

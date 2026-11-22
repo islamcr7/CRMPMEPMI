@@ -2,6 +2,7 @@ import { useEffect, useId, useState, type ButtonHTMLAttributes, type InputHTMLAt
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Inbox, Loader2, Search, X } from 'lucide-react';
 import type { Tone } from '../lib/labels';
 
+import { t } from '../lib/i18n';
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
 
 /* ---------- Bouton ---------- */
@@ -83,7 +84,7 @@ export function Select({ label, className, children, ...props }: SelectHTMLAttri
   );
 }
 
-export function SearchInput({ value, onChange, placeholder = 'Rechercher…' }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
+export function SearchInput({ value, onChange, placeholder = t('Rechercher…') }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
   return (
     <div className="relative w-full sm:w-72">
       <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -173,7 +174,7 @@ export function Skeleton({ className }: { className?: string }) {
 /** Squelette de chargement (lignes de liste) – remplace l'ancien spinner. */
 export function Spinner({ className, rows = 5 }: { className?: string; rows?: number }) {
   return (
-    <div className={cx('space-y-4 p-4', className)} aria-busy="true" aria-label="Chargement">
+    <div className={cx('space-y-4 p-4', className)} aria-busy="true" aria-label={t("Chargement")}>
       {Array.from({ length: rows }, (_, i) => (
         <div key={i} className="flex items-center gap-3">
           <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
@@ -250,13 +251,13 @@ export function Pagination({ page, pageSize, total, onPage }: { page: number; pa
   return (
     <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-sm text-slate-500">
       <span>
-        {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} sur {total}
+        {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} {t("sur")} {total}
       </span>
       <div className="flex gap-1">
-        <Button variant="ghost" size="sm" disabled={page <= 1} onClick={() => onPage(page - 1)} aria-label="Page précédente">
+        <Button variant="ghost" size="sm" disabled={page <= 1} onClick={() => onPage(page - 1)} aria-label={t("Page précédente")}>
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <Button variant="ghost" size="sm" disabled={page >= pages} onClick={() => onPage(page + 1)} aria-label="Page suivante">
+        <Button variant="ghost" size="sm" disabled={page >= pages} onClick={() => onPage(page + 1)} aria-label={t("Page suivante")}>
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
@@ -284,7 +285,7 @@ export function Modal({ open, onClose, title, children, wide }: { open: boolean;
       >
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
           <h2 className="text-base font-semibold text-slate-900">{title}</h2>
-          <button onClick={onClose} className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600" aria-label="Fermer">
+          <button onClick={onClose} className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600" aria-label={t("Fermer")}>
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -294,11 +295,11 @@ export function Modal({ open, onClose, title, children, wide }: { open: boolean;
   );
 }
 
-export function FormActions({ onCancel, loading, submitLabel = 'Enregistrer' }: { onCancel: () => void; loading?: boolean; submitLabel?: string }) {
+export function FormActions({ onCancel, loading, submitLabel = t('Enregistrer') }: { onCancel: () => void; loading?: boolean; submitLabel?: string }) {
   return (
     <div className="mt-5 flex justify-end gap-2">
       <Button type="button" variant="secondary" onClick={onCancel}>
-        Annuler
+        {t("Annuler")}
       </Button>
       <Button type="submit" loading={loading}>
         {submitLabel}

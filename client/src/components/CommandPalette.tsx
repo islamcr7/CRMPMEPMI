@@ -9,6 +9,7 @@ import {
   FileText,
   History,
   KanbanSquare,
+  Languages,
   LayoutDashboard,
   Loader2,
   Moon,
@@ -27,6 +28,7 @@ import { ActivityForm, CompanyForm, ContactForm, DealForm } from './forms';
 import { useSearchGroups } from './GlobalSearch';
 import { useRecent } from '../lib/recent';
 
+import { getLang, setLang, t } from '../lib/i18n';
 interface Command {
   key: string;
   icon: typeof Search;
@@ -67,12 +69,12 @@ export function CommandPalette({ open, onClose, setTheme }: { open: boolean; onC
 
   const actions: Command[] = useMemo(
     () => [
-      { key: 'a-contact', icon: UserPlus, title: 'Nouveau contact', keywords: 'creer ajouter personne', run: () => setForm('contact') },
-      { key: 'a-company', icon: Building2, title: 'Nouvelle entreprise', keywords: 'creer ajouter societe client', run: () => setForm('company') },
-      { key: 'a-deal', icon: KanbanSquare, title: 'Nouvelle opportunité', keywords: 'creer affaire vente deal', run: () => setForm('deal') },
-      { key: 'a-activity', icon: CalendarPlus, title: 'Nouvelle activité', keywords: 'creer tache appel rendez-vous rdv relance', run: () => setForm('activity') },
-      { key: 'a-quote', icon: FilePlus, title: 'Nouveau devis', keywords: 'creer proposition', run: go('/documents/new/QUOTE') },
-      { key: 'a-invoice', icon: Receipt, title: 'Nouvelle facture', keywords: 'creer facturer', run: go('/documents/new/INVOICE') },
+      { key: 'a-contact', icon: UserPlus, title: t('Nouveau contact'), keywords: t('creer ajouter personne'), run: () => setForm('contact') },
+      { key: 'a-company', icon: Building2, title: t('Nouvelle entreprise'), keywords: t('creer ajouter societe client'), run: () => setForm('company') },
+      { key: 'a-deal', icon: KanbanSquare, title: t('Nouvelle opportunité'), keywords: t('creer affaire vente deal'), run: () => setForm('deal') },
+      { key: 'a-activity', icon: CalendarPlus, title: t('Nouvelle activité'), keywords: t('creer tache appel rendez-vous rdv relance'), run: () => setForm('activity') },
+      { key: 'a-quote', icon: FilePlus, title: t('Nouveau devis'), keywords: t('creer proposition'), run: go('/documents/new/QUOTE') },
+      { key: 'a-invoice', icon: Receipt, title: t('Nouvelle facture'), keywords: t('creer facturer'), run: go('/documents/new/INVOICE') },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
@@ -80,23 +82,26 @@ export function CommandPalette({ open, onClose, setTheme }: { open: boolean; onC
 
   const pages: Command[] = useMemo(
     () => [
-      { key: 'p-home', icon: LayoutDashboard, title: 'Tableau de bord', keywords: 'accueil dashboard', run: go('/') },
-      { key: 'p-companies', icon: Building2, title: 'Entreprises', run: go('/companies') },
-      { key: 'p-contacts', icon: Users, title: 'Contacts', run: go('/contacts') },
-      { key: 'p-pipeline', icon: KanbanSquare, title: 'Pipeline', keywords: 'opportunites kanban', run: go('/pipeline') },
-      { key: 'p-activities', icon: CheckSquare, title: 'Activités', keywords: 'taches agenda', run: go('/activities') },
-      { key: 'p-quotes', icon: FileText, title: 'Devis', run: go('/documents/quotes') },
-      { key: 'p-invoices', icon: Receipt, title: 'Factures & avoirs', run: go('/documents/invoices') },
-      { key: 'p-collections', icon: Wallet, title: 'Recouvrement', keywords: 'impayes relances retard', run: go('/collections') },
-      { key: 'p-products', icon: Package, title: 'Produits & services', keywords: 'catalogue', run: go('/products') },
+      { key: 'p-home', icon: LayoutDashboard, title: t('Tableau de bord'), keywords: t('accueil dashboard'), run: go('/') },
+      { key: 'p-companies', icon: Building2, title: t('Entreprises'), run: go('/companies') },
+      { key: 'p-contacts', icon: Users, title: t('Contacts'), run: go('/contacts') },
+      { key: 'p-pipeline', icon: KanbanSquare, title: t('Pipeline'), keywords: t('opportunites kanban'), run: go('/pipeline') },
+      { key: 'p-activities', icon: CheckSquare, title: t('Activités'), keywords: t('taches agenda'), run: go('/activities') },
+      { key: 'p-quotes', icon: FileText, title: t('Devis'), run: go('/documents/quotes') },
+      { key: 'p-invoices', icon: Receipt, title: t('Factures & avoirs'), run: go('/documents/invoices') },
+      { key: 'p-collections', icon: Wallet, title: t('Recouvrement'), keywords: t('impayes relances retard'), run: go('/collections') },
+      { key: 'p-products', icon: Package, title: t('Produits & services'), keywords: t('catalogue'), run: go('/products') },
       ...(user?.role === 'ADMIN'
         ? [
-            { key: 'p-users', icon: Users, title: 'Utilisateurs', keywords: 'equipe admin', run: go('/users') },
-            { key: 'p-settings', icon: Settings, title: 'Paramètres', keywords: 'entreprise tva devise', run: go('/settings') },
+            { key: 'p-users', icon: Users, title: t('Utilisateurs'), keywords: t('equipe admin'), run: go('/users') },
+            { key: 'p-settings', icon: Settings, title: t('Paramètres'), keywords: t('entreprise tva devise'), run: go('/settings') },
           ]
         : []),
-      { key: 't-dark', icon: Moon, title: 'Passer en thème sombre', keywords: 'mode nuit dark', run: () => setTheme('dark') },
-      { key: 't-light', icon: Sun, title: 'Passer en thème clair', keywords: 'mode jour light', run: () => setTheme('light') },
+      { key: 't-dark', icon: Moon, title: t('Passer en thème sombre'), keywords: t('mode nuit dark'), run: () => setTheme('dark') },
+      { key: 't-light', icon: Sun, title: t('Passer en thème clair'), keywords: t('mode jour light'), run: () => setTheme('light') },
+      getLang() === 'fr'
+        ? { key: 'l-en', icon: Languages, title: 'Switch to English', keywords: 'langue language anglais english', run: () => setLang('en') }
+        : { key: 'l-fr', icon: Languages, title: 'Passer en français', keywords: 'langue language french francais', run: () => setLang('fr') },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [user?.role],
@@ -115,15 +120,15 @@ export function CommandPalette({ open, onClose, setTheme }: { open: boolean; onC
     const p = pages.filter(match);
     if (!nq && recent.length) {
       result.push({
-        title: 'Récemment consultés',
+        title: t('Récemment consultés'),
         items: recent.slice(0, 5).map((r) => ({ key: `r-${r.kind}-${r.id}`, icon: History, title: r.title, sub: r.sub, run: go(r.to) })),
       });
     }
-    if (a.length) result.push({ title: 'Actions rapides', items: a });
+    if (a.length) result.push({ title: t('Actions rapides'), items: a });
     for (const g of searchGroups) {
       result.push({ title: g.title, items: g.items.map((i) => ({ key: i.key, icon: i.icon, title: i.title, sub: i.sub, run: go(i.to) })) });
     }
-    if (p.length) result.push({ title: nq ? 'Pages' : 'Aller à', items: p });
+    if (p.length) result.push({ title: nq ? t('Pages') : t('Aller à'), items: p });
     return result;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, actions, pages, searchGroups, recent]);
@@ -165,7 +170,7 @@ export function CommandPalette({ open, onClose, setTheme }: { open: boolean; onC
           <div
             role="dialog"
             aria-modal="true"
-            aria-label="Palette de commandes"
+            aria-label={t("Palette de commandes")}
             className="dialog-in flex max-h-[70vh] w-full max-w-xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl"
             onMouseDown={(e) => e.stopPropagation()}
           >
@@ -176,8 +181,8 @@ export function CommandPalette({ open, onClose, setTheme }: { open: boolean; onC
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 onKeyDown={onKeyDown}
-                placeholder="Rechercher ou lancer une action…"
-                aria-label="Commande ou recherche"
+                placeholder={t("Rechercher ou lancer une action…")}
+                aria-label={t("Commande ou recherche")}
                 role="combobox"
                 aria-expanded="true"
                 aria-controls="palette-list"
@@ -185,11 +190,11 @@ export function CommandPalette({ open, onClose, setTheme }: { open: boolean; onC
                 className="h-14 flex-1 bg-transparent text-base text-slate-900 placeholder:text-slate-400 focus:outline-none"
               />
               {isFetching && <Loader2 className="h-4 w-4 animate-spin text-slate-400" />}
-              <kbd className="rounded border border-slate-200 px-1.5 py-0.5 text-xs text-slate-400">Échap</kbd>
+              <kbd className="rounded border border-slate-200 px-1.5 py-0.5 text-xs text-slate-400">{t("Échap")}</kbd>
             </div>
             <div ref={listRef} id="palette-list" role="listbox" className="overflow-y-auto py-2">
               {flat.length === 0 ? (
-                <p className="px-4 py-8 text-center text-sm text-slate-500">{enabled && isFetching ? 'Recherche…' : `Aucun résultat pour « ${q} »`}</p>
+                <p className="px-4 py-8 text-center text-sm text-slate-500">{enabled && isFetching ? t('Recherche…') : t('Aucun résultat pour « {q} »', { q })}</p>
               ) : (
                 sections.map((s) => (
                   <div key={s.title} className="py-1">
@@ -222,13 +227,13 @@ export function CommandPalette({ open, onClose, setTheme }: { open: boolean; onC
             </div>
             <div className="flex items-center gap-4 border-t border-slate-100 px-4 py-2 text-xs text-slate-400">
               <span>
-                <kbd className="font-sans">↑↓</kbd> naviguer
+                <kbd className="font-sans">↑↓</kbd> {t("naviguer")}
               </span>
               <span>
-                <kbd className="font-sans">↵</kbd> ouvrir
+                <kbd className="font-sans">↵</kbd> {t("ouvrir")}
               </span>
               <span className="ml-auto">
-                <kbd className="font-sans">Ctrl K</kbd> pour rouvrir
+                <kbd className="font-sans">{t("Ctrl K")}</kbd> {t("pour rouvrir")}
               </span>
             </div>
           </div>

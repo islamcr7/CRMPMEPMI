@@ -12,6 +12,7 @@ import { Badge, Button, Card, EmptyState, ErrorBox, PageHeader, Pagination, Sear
 import { Owner } from '../components/OwnerCell';
 import { ContactForm } from '../components/forms';
 
+import { t } from '../lib/i18n';
 export default function ContactsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -34,25 +35,25 @@ export default function ContactsPage() {
   return (
     <>
       <PageHeader
-        title="Contacts"
-        subtitle={data ? `${data.total} contact(s)` : undefined}
+        title={t("Contacts")}
+        subtitle={data ? t('{n} contact(s)', { n: data.total }) : undefined}
         actions={
           <>
             <Button variant="secondary" onClick={() => setImporting(true)}>
-              <Upload className="h-4 w-4" /> Importer
+              <Upload className="h-4 w-4" /> {t("Importer")}
             </Button>
             <ExportButton entity="contacts" />
             <Button onClick={() => setCreating(true)}>
-              <Plus className="h-4 w-4" /> Nouveau contact
+              <Plus className="h-4 w-4" /> {t("Nouveau contact")}
             </Button>
           </>
         }
       />
       <Card>
         <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row">
-          <SearchInput value={q} onChange={(v) => (setQ(v), setPage(1))} placeholder="Nom, email, téléphone, entreprise…" />
+          <SearchInput value={q} onChange={(v) => (setQ(v), setPage(1))} placeholder={t("Nom, email, téléphone, entreprise…")} />
           <Select value={status} onChange={(e) => (setStatus(e.target.value), setPage(1))} className="sm:w-44">
-            <option value="">Tous les statuts</option>
+            <option value="">{t("Tous les statuts")}</option>
             {CONTACT_STATUSES.map((s) => (
               <option key={s.value} value={s.value}>
                 {s.label}
@@ -60,26 +61,26 @@ export default function ContactsPage() {
             ))}
           </Select>
           <Select value={mine ? 'mine' : 'all'} onChange={(e) => (setMine(e.target.value === 'mine'), setPage(1))} className="sm:w-44">
-            <option value="all">Tous</option>
-            <option value="mine">Mes contacts</option>
+            <option value="all">{t("Tous")}</option>
+            <option value="mine">{t("Mes contacts")}</option>
           </Select>
         </div>
         <ErrorBox error={error} />
         {isLoading ? (
           <Spinner />
         ) : !data?.items.length ? (
-          <EmptyState title="Aucun contact" />
+          <EmptyState title={t("Aucun contact")} />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
                 <tr>
-                  <SortHeader label="Nom" field="name" sort={sort} onSort={onSort} />
-                  <SortHeader label="Entreprise" field="company" sort={sort} onSort={onSort} className="hidden sm:table-cell" />
-                  <th className="hidden px-4 py-2.5 md:table-cell">Email</th>
-                  <th className="hidden px-4 py-2.5 lg:table-cell">Téléphone</th>
-                  <SortHeader label="Statut" field="status" sort={sort} onSort={onSort} />
-                  <th className="hidden px-4 py-2.5 md:table-cell">Responsable</th>
+                  <SortHeader label={t("Nom")} field="name" sort={sort} onSort={onSort} />
+                  <SortHeader label={t("Entreprise")} field="company" sort={sort} onSort={onSort} className="hidden sm:table-cell" />
+                  <th className="hidden px-4 py-2.5 md:table-cell">{t("Email")}</th>
+                  <th className="hidden px-4 py-2.5 lg:table-cell">{t("Téléphone")}</th>
+                  <SortHeader label={t("Statut")} field="status" sort={sort} onSort={onSort} />
+                  <th className="hidden px-4 py-2.5 md:table-cell">{t("Responsable")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">

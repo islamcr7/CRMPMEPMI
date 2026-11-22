@@ -13,14 +13,15 @@ import { GlobalSearch } from '../components/GlobalSearch';
 import { GettingStarted } from '../components/GettingStarted';
 import { GroupedBarChart, HorizontalBars, Legend, Segmented, ViewToggle, type Series } from '../components/charts';
 
-const MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
-const MONTHS_LONG = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
-const monthShort = (k: string) => MONTHS[Number(k.slice(5)) - 1];
-const monthLong = (k: string) => `${MONTHS_LONG[Number(k.slice(5)) - 1]} ${k.slice(0, 4)}`;
+import { locale, t } from '../lib/i18n';
+// Noms de mois dans la langue de l'interface (clé « AAAA-MM »)
+const monthDate = (k: string) => new Date(Number(k.slice(0, 4)), Number(k.slice(5)) - 1, 1);
+const monthShort = (k: string) => monthDate(k).toLocaleDateString(locale(), { month: 'short' });
+const monthLong = (k: string) => monthDate(k).toLocaleDateString(locale(), { month: 'long', year: 'numeric' });
 
 const SERIES: Series[] = [
-  { key: 'amount', label: 'Affaires gagnées (HT)', color: 'var(--chart-1)' },
-  { key: 'collected', label: 'Encaissements (TTC)', color: 'var(--chart-2)' },
+  { key: 'amount', label: t('Affaires gagnées (HT)'), color: 'var(--chart-1)' },
+  { key: 'collected', label: t('Encaissements (TTC)'), color: 'var(--chart-2)' },
 ];
 const FUNNEL_COLORS = ['var(--funnel-1)', 'var(--funnel-2)', 'var(--funnel-3)', 'var(--funnel-4)'];
 
@@ -53,7 +54,7 @@ function Kpi({ label, value, sub, icon: Icon, to, alert }: { label: string; valu
 
 function DashboardSkeleton() {
   return (
-    <div aria-busy="true" aria-label="Chargement du tableau de bord">
+    <div aria-busy="true" aria-label={t("Chargement du tableau de bord")}>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
           <div key={i} className="rounded-xl border border-slate-200 bg-white p-4">
@@ -100,7 +101,7 @@ export default function DashboardPage() {
   const currency = settings?.currency ?? 'EUR';
   const axisFmt = (v: number) => {
     try {
-      return new Intl.NumberFormat('fr-FR', { style: 'currency', currency, notation: 'compact', maximumFractionDigits: 1 }).format(v);
+      return new Intl.NumberFormat(locale(), { style: 'currency', currency, notation: 'compact', maximumFractionDigits: 1 }).format(v);
     } catch {
       return String(v);
     }
@@ -108,7 +109,7 @@ export default function DashboardPage() {
 
   const header = (
     <>
-      <PageHeader title={`Bonjour ${user?.name.split(' ')[0]} 👋`} subtitle="Vue d’ensemble de votre activité commerciale" />
+      <PageHeader title={t('Bonjour {name} 👋', { name: user?.name.split(' ')[0] })} subtitle={t("Vue d’ensemble de votre activité commerciale")} />
       <div className="mb-6">
         <GlobalSearch />
       </div>
@@ -133,25 +134,25 @@ export default function DashboardPage() {
       <GettingStarted setup={data.setup} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Kpi label="Pipeline en cours" value={money(data.pipeline.value, true)} sub={`${data.pipeline.openCount} opportunités · pondéré ${money(data.pipeline.weighted, true)}`} icon={Target} to="/pipeline" />
+        <Kpi label={t("Pipeline en cours")} value={money(data.pipeline.value, true)} sub={t('{n} opportunités · pondéré {amount}', { n: data.pipeline.openCount, amount: money(data.pipeline.weighted, true) })} icon={Target} to="/pipeline" />
         <Kpi
-          label="Gagné ce mois"
+          label={t("Gagné ce mois")}
           value={money(data.wonThisMonth, true)}
-          sub={data.pipeline.winRate !== null ? `Taux de transformation ${data.pipeline.winRate} %` : 'Aucune affaire clôturée'}
+          sub={data.pipeline.winRate !== null ? t('Taux de transformation {n} %', { n: data.pipeline.winRate }) : t('Aucune affaire clôturée')}
           icon={Trophy}
         />
         <Kpi
-          label="Factures à encaisser"
+          label={t("Factures à encaisser")}
           value={money(data.invoices.unpaidTotal, true)}
-          sub={data.invoices.overdueCount > 0 ? `${data.invoices.overdueCount} en retard (${money(data.invoices.overdueTotal, true)})` : `${data.invoices.unpaidCount} facture(s) émise(s)`}
+          sub={data.invoices.overdueCount > 0 ? t('{n} en retard ({amount})', { n: data.invoices.overdueCount, amount: money(data.invoices.overdueTotal, true) }) : t('{n} facture(s) émise(s)', { n: data.invoices.unpaidCount })}
           alert={data.invoices.overdueCount > 0}
           icon={Receipt}
           to="/collections"
         />
         <Kpi
-          label="Tâches en retard"
+          label={t("Tâches en retard")}
           value={String(data.activities.overdue)}
-          sub={data.activities.overdue > 0 ? 'À traiter en priorité' : `${data.contacts.total} contacts · +${data.contacts.newThisMonth} ce mois`}
+          sub={data.activities.overdue > 0 ? t('À traiter en priorité') : t('{n} contacts · +{m} ce mois', { n: data.contacts.total, m: data.contacts.newThisMonth })}
           alert={data.activities.overdue > 0}
           icon={data.activities.overdue > 0 ? AlertTriangle : Users}
           to="/activities"
@@ -161,16 +162,16 @@ export default function DashboardPage() {
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <Card
           className="lg:col-span-2"
-          title="Ventes et encaissements"
+          title={t("Ventes et encaissements")}
           actions={
             <>
               <Segmented
-                label="Période"
+                label={t("Période")}
                 value={months}
                 onChange={setMonths}
                 options={[
-                  { value: 6, label: '6 mois' },
-                  { value: 12, label: '12 mois' },
+                  { value: 6, label: t('6 mois') },
+                  { value: 12, label: t('12 mois') },
                 ]}
               />
               <ViewToggle table={table} onChange={setTable} />
@@ -181,20 +182,20 @@ export default function DashboardPage() {
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <Legend series={SERIES} />
               <p className="text-xs text-slate-500">
-                Sur la période : <span className="font-medium text-slate-800">{money(totalWon, true)}</span> gagnés ·{' '}
-                <span className="font-medium text-slate-800">{money(totalCollected, true)}</span> encaissés
+                {t("Sur la période :")} <span className="font-medium text-slate-800">{money(totalWon, true)}</span> {t("gagnés ·")}{' '}
+                <span className="font-medium text-slate-800">{money(totalCollected, true)}</span> {t("encaissés")}
               </p>
             </div>
             {table ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <caption className="sr-only">Affaires gagnées et encaissements par mois</caption>
+                  <caption className="sr-only">{t("Affaires gagnées et encaissements par mois")}</caption>
                   <thead className="text-left text-xs text-slate-500">
                     <tr className="border-b border-slate-200">
-                      <th className="py-2 font-medium">Mois</th>
-                      <th className="py-2 text-right font-medium">Affaires gagnées (HT)</th>
-                      <th className="py-2 text-right font-medium">Nb</th>
-                      <th className="py-2 text-right font-medium">Encaissements (TTC)</th>
+                      <th className="py-2 font-medium">{t("Mois")}</th>
+                      <th className="py-2 text-right font-medium">{t("Affaires gagnées (HT)")}</th>
+                      <th className="py-2 text-right font-medium">{t("Nb")}</th>
+                      <th className="py-2 text-right font-medium">{t("Encaissements (TTC)")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -218,14 +219,14 @@ export default function DashboardPage() {
                 value={(d, k) => (k === 'amount' ? d.amount : d.collected)}
                 format={(v) => money(v)}
                 formatAxis={axisFmt}
-                extra={(d) => `${d.wonCount} affaire(s) gagnée(s)`}
-                ariaLabel={`Affaires gagnées et encaissements sur ${months} mois`}
+                extra={(d) => t('{n} affaire(s) gagnée(s)', { n: d.wonCount })}
+                ariaLabel={t('Affaires gagnées et encaissements sur {n} mois', { n: months })}
               />
             )}
           </div>
         </Card>
 
-        <Card title="Pipeline par étape" actions={<Link to="/pipeline" className="text-xs font-medium text-indigo-600 hover:underline">Ouvrir</Link>}>
+        <Card title={t("Pipeline par étape")} actions={<Link to="/pipeline" className="text-xs font-medium text-indigo-600 hover:underline">{t("Ouvrir")}</Link>}>
           <div className="p-4">
             <HorizontalBars
               format={(v) => money(v, true)}
@@ -234,25 +235,25 @@ export default function DashboardPage() {
                 label: STAGES.find((x) => x.value === s.stage)?.label ?? s.stage,
                 value: s.amount,
                 color: FUNNEL_COLORS[i],
-                detail: `${s.count} opp.`,
+                detail: t('{n} opp.', { n: s.count }),
                 tooltip: (
                   <>
                     <div className="font-semibold text-slate-800">{STAGES.find((x) => x.value === s.stage)?.label}</div>
                     <div className="text-slate-500">
-                      {s.count} opportunité(s) · {money(s.amount)}
+                      {s.count} {t("opportunité(s) ·")} {money(s.amount)}
                     </div>
-                    <div className="text-slate-500">Panier moyen : {money(s.count ? s.amount / s.count : 0)}</div>
+                    <div className="text-slate-500">{t("Panier moyen :")} {money(s.count ? s.amount / s.count : 0)}</div>
                   </>
                 ),
               }))}
             />
             <dl className="mt-5 grid grid-cols-2 gap-3 border-t border-slate-100 pt-4 text-xs">
               <div>
-                <dt className="text-slate-500">Valeur pondérée</dt>
+                <dt className="text-slate-500">{t("Valeur pondérée")}</dt>
                 <dd className="mt-0.5 text-base font-semibold text-slate-900">{money(data.pipeline.weighted, true)}</dd>
               </div>
               <div>
-                <dt className="text-slate-500">Encaissé cette année</dt>
+                <dt className="text-slate-500">{t("Encaissé cette année")}</dt>
                 <dd className="mt-0.5 text-base font-semibold text-slate-900">{money(data.invoices.paidThisYear, true)}</dd>
               </div>
             </dl>
@@ -262,27 +263,27 @@ export default function DashboardPage() {
         <Card
           title={
             <span className="inline-flex items-center gap-2">
-              <CalendarCheck className="h-4 w-4 text-slate-400" /> Mes tâches du jour et en retard
+              <CalendarCheck className="h-4 w-4 text-slate-400" /> {t("Mes tâches du jour et en retard")}
             </span>
           }
           className="lg:col-span-2"
           actions={
             <Link to="/activities" className="text-xs font-medium text-indigo-600 hover:underline">
-              Tout voir
+              {t("Tout voir")}
             </Link>
           }
         >
-          <ActivityList items={data.activities.myTasks} emptyText="Rien à faire aujourd’hui 🎉" />
+          <ActivityList items={data.activities.myTasks} emptyText={t("Rien à faire aujourd’hui 🎉")} />
         </Card>
 
         <Card
           title={
             <span className="inline-flex items-center gap-2">
-              <History className="h-4 w-4 text-slate-400" /> Activité récente
+              <History className="h-4 w-4 text-slate-400" /> {t("Activité récente")}
             </span>
           }
         >
-          <ActivityList items={data.activities.recent} emptyText="Aucune activité terminée" />
+          <ActivityList items={data.activities.recent} emptyText={t("Aucune activité terminée")} />
         </Card>
       </div>
     </>

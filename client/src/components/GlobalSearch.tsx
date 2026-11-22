@@ -8,6 +8,7 @@ import { CONTACT_STATUSES, DOC_STATUSES, STAGES, label, tone } from '../lib/labe
 import type { ContactStatus, DealStage, DocumentStatus, Money } from '../types';
 import { Badge, useDebounce } from './ui';
 
+import { t } from '../lib/i18n';
 interface SearchResults {
   contacts: { id: string; firstName: string; lastName: string; email: string | null; status: ContactStatus; company: { id: string; name: string } | null }[];
   deals: { id: string; title: string; amount: Money; stage: DealStage; company: { id: string; name: string } | null }[];
@@ -41,7 +42,7 @@ export function useSearchGroups(q: string) {
     if (!data || !enabled) return [];
     return [
       {
-        title: 'Contacts',
+        title: t('Contacts'),
         items: data.contacts.map<Item>((c) => ({
           key: `c-${c.id}`,
           to: `/contacts/${c.id}`,
@@ -52,7 +53,7 @@ export function useSearchGroups(q: string) {
         })),
       },
       {
-        title: 'Opportunités',
+        title: t('Opportunités'),
         items: data.deals.map<Item>((d) => ({
           key: `d-${d.id}`,
           to: `/deals/${d.id}`,
@@ -63,16 +64,16 @@ export function useSearchGroups(q: string) {
         })),
       },
       {
-        title: 'Factures',
+        title: t('Factures'),
         items: data.invoices.map<Item>((i) => {
           const late = i.status === 'SENT' && isOverdue(i.dueDate);
           return {
             key: `i-${i.id}`,
             to: `/documents/${i.id}`,
             icon: Receipt,
-            title: i.number.startsWith('BROUILLON-') ? 'Facture brouillon' : i.number,
+            title: i.number.startsWith('BROUILLON-') ? t('Facture brouillon') : i.number,
             sub: `${i.company.name} · ${money(i.total)}`,
-            right: late ? <Badge tone="red">En retard</Badge> : <Badge tone={DOC_STATUSES[i.status].tone}>{DOC_STATUSES[i.status].label}</Badge>,
+            right: late ? <Badge tone="red">{t("En retard")}</Badge> : <Badge tone={DOC_STATUSES[i.status].tone}>{DOC_STATUSES[i.status].label}</Badge>,
           };
         }),
       },
@@ -158,8 +159,8 @@ export function GlobalSearch() {
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
-          placeholder="Rechercher un contact, une opportunité, une facture…"
-          aria-label="Recherche globale"
+          placeholder={t("Rechercher un contact, une opportunité, une facture…")}
+          aria-label={t("Recherche globale")}
           role="combobox"
           aria-expanded={showPanel}
           aria-controls="global-search-results"
@@ -175,7 +176,7 @@ export function GlobalSearch() {
                 inputRef.current?.focus();
               }}
               className="rounded p-0.5 text-slate-400 hover:text-slate-600"
-              aria-label="Effacer"
+              aria-label={t("Effacer")}
             >
               <X className="h-4 w-4" />
             </button>
@@ -188,7 +189,7 @@ export function GlobalSearch() {
       {showPanel && (
         <div id="global-search-results" role="listbox" className="absolute z-30 mt-2 max-h-[70vh] w-full overflow-y-auto rounded-xl border border-slate-200 bg-white py-2 shadow-xl">
           {groups.length === 0 ? (
-            <p className="px-4 py-6 text-center text-sm text-slate-500">{isFetching || search !== q.trim() ? 'Recherche…' : `Aucun résultat pour « ${search} »`}</p>
+            <p className="px-4 py-6 text-center text-sm text-slate-500">{isFetching || search !== q.trim() ? t('Recherche…') : t('Aucun résultat pour « {q} »', { q: search })}</p>
           ) : (
             groups.map((g) => (
               <div key={g.title} className="py-1">

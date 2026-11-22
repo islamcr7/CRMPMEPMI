@@ -1,3 +1,5 @@
+import { t, tMaybe } from './i18n';
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -24,8 +26,9 @@ export async function api<T>(path: string, method: Method = 'GET', body?: unknow
       window.dispatchEvent(new Event('crm:unauthorized'));
     }
     const detail = data.details?.[0];
-    const message = detail ? `${data.error} : ${detail.path ? detail.path + ' – ' : ''}${detail.message}` : data.error;
-    throw new ApiError(res.status, message ?? `Erreur ${res.status}`, data.details);
+    const error = data.error ? tMaybe(data.error) : undefined;
+    const message = detail ? `${error} : ${detail.path ? detail.path + ' – ' : ''}${tMaybe(detail.message)}` : error;
+    throw new ApiError(res.status, message ?? t('Erreur {n}', { n: res.status }), data.details);
   }
   return data as T;
 }
@@ -39,4 +42,4 @@ export function toQuery(params: Record<string, string | number | undefined | nul
   return str ? `?${str}` : '';
 }
 
-export const errorMessage = (e: unknown) => (e instanceof Error ? e.message : 'Une erreur est survenue');
+export const errorMessage = (e: unknown) => (e instanceof Error ? e.message : t('Une erreur est survenue'));

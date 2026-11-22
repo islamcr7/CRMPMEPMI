@@ -15,10 +15,11 @@ import { ActivityComposer, InlineField, RecordHeader, StagePath, Tabs, Timeline,
 import { Owner } from '../components/OwnerCell';
 import { EntityPicker, useUsers } from '../components/pickers';
 
+import { t } from '../lib/i18n';
 const CONTACT_PATH: PathStep[] = [
-  { value: 'LEAD', label: 'Piste', guidance: ['Vérifier les coordonnées et l’entreprise.', 'Premier contact : appel ou email de présentation.'] },
-  { value: 'PROSPECT', label: 'Prospect', guidance: ['Identifier le besoin et créer une opportunité.', 'Planifier un rendez-vous de découverte.'] },
-  { value: 'CUSTOMER', label: 'Client', guidance: ['Suivre la satisfaction après la livraison.', 'Repérer de nouvelles ventes : renouvellement, services complémentaires.'] },
+  { value: 'LEAD', label: t('Piste'), guidance: [t('Vérifier les coordonnées et l’entreprise.'), t('Premier contact : appel ou email de présentation.')] },
+  { value: 'PROSPECT', label: t('Prospect'), guidance: [t('Identifier le besoin et créer une opportunité.'), t('Planifier un rendez-vous de découverte.')] },
+  { value: 'CUSTOMER', label: t('Client'), guidance: [t('Suivre la satisfaction après la livraison.'), t('Repérer de nouvelles ventes : renouvellement, services complémentaires.')] },
 ];
 
 export default function ContactDetailPage() {
@@ -37,7 +38,7 @@ export default function ContactDetailPage() {
     mutationFn: (status: ContactStatus) => api<Contact>(`/contacts/${id}`, 'PATCH', { status }),
     onSuccess: (ct) => {
       qc.invalidateQueries();
-      toast.success(`${fullName(ct)} est maintenant « ${label(CONTACT_STATUSES, ct.status)} »`);
+      toast.success(t('{name} est maintenant « {status} »', { name: fullName(ct), status: label(CONTACT_STATUSES, ct.status) }));
     },
     onError: (e) => toast.error(e.message),
   });
@@ -45,7 +46,7 @@ export default function ContactDetailPage() {
     mutationFn: () => api(`/contacts/${id}`, 'DELETE'),
     onSuccess: () => {
       qc.invalidateQueries();
-      toast.success('Contact supprimé');
+      toast.success(t('Contact supprimé'));
       navigate('/contacts');
     },
     onError: (e) => toast.error(e.message),
@@ -59,12 +60,12 @@ export default function ContactDetailPage() {
   return (
     <>
       <Link to="/contacts" className="mb-3 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700">
-        <ArrowLeft className="h-4 w-4" /> Contacts
+        <ArrowLeft className="h-4 w-4" /> {t("Contacts")}
       </Link>
 
       <RecordHeader
         icon={User}
-        typeLabel="Contact"
+        typeLabel={t("Contact")}
         title={fullName(c)}
         badges={<Badge tone={tone(CONTACT_STATUSES, c.status)}>{label(CONTACT_STATUSES, c.status)}</Badge>}
         actions={
@@ -72,51 +73,51 @@ export default function ContactDetailPage() {
             {c.phone && (
               <a href={`tel:${c.phone}`}>
                 <Button variant="secondary">
-                  <Phone className="h-4 w-4" /> Appeler
+                  <Phone className="h-4 w-4" /> {t("Appeler")}
                 </Button>
               </a>
             )}
             {c.email && (
               <a href={`mailto:${c.email}`}>
                 <Button variant="secondary">
-                  <Mail className="h-4 w-4" /> Email
+                  <Mail className="h-4 w-4" /> {t("Email")}
                 </Button>
               </a>
             )}
             <Button onClick={() => setNewDeal(true)}>
-              <Plus className="h-4 w-4" /> Opportunité
+              <Plus className="h-4 w-4" /> {t("Opportunité")}
             </Button>
             <Button
               variant="danger"
-              aria-label="Supprimer le contact"
+              aria-label={t("Supprimer le contact")}
               loading={remove.isPending}
-              onClick={async () => (await confirmDialog({ title: `Supprimer ${fullName(c)} ?`, message: 'Ses activités seront également supprimées.', confirmLabel: 'Supprimer', danger: true })) && remove.mutate()}
+              onClick={async () => (await confirmDialog({ title: t('Supprimer {name} ?', { name: fullName(c) }), message: t('Ses activités seront également supprimées.'), confirmLabel: t('Supprimer'), danger: true })) && remove.mutate()}
             >
               <Trash2 className="h-4 w-4" />
             </Button>
           </>
         }
         highlights={[
-          { label: 'Fonction', value: c.position },
+          { label: t('Fonction'), value: c.position },
           {
-            label: 'Entreprise',
+            label: t('Entreprise'),
             value: c.company && (
               <Link to={`/companies/${c.company.id}`} className="text-indigo-600 hover:underline">
                 {c.company.name}
               </Link>
             ),
           },
-          { label: 'Email', value: c.email && <a href={`mailto:${c.email}`} className="text-indigo-600 hover:underline">{c.email}</a> },
-          { label: 'Téléphone', value: c.phone && <a href={`tel:${c.phone}`} className="text-indigo-600 hover:underline">{c.phone}</a> },
-          { label: 'Source', value: c.source },
-          { label: 'Responsable', value: <Owner owner={c.owner} /> },
+          { label: t('Email'), value: c.email && <a href={`mailto:${c.email}`} className="text-indigo-600 hover:underline">{c.email}</a> },
+          { label: t('Téléphone'), value: c.phone && <a href={`tel:${c.phone}`} className="text-indigo-600 hover:underline">{c.phone}</a> },
+          { label: t('Source'), value: c.source },
+          { label: t('Responsable'), value: <Owner owner={c.owner} /> },
         ]}
       />
 
       <StagePath
         steps={CONTACT_PATH}
         current={c.status}
-        final={c.status === 'INACTIVE' ? { label: 'Inactif', tone: 'lost' } : undefined}
+        final={c.status === 'INACTIVE' ? { label: t('Inactif'), tone: 'lost' } : undefined}
         onChange={(s) => setStatus.mutate(s as ContactStatus)}
         onReopen={() => setStatus.mutate('LEAD')}
         pending={setStatus.isPending}
@@ -128,8 +129,8 @@ export default function ContactDetailPage() {
             value={tab}
             onChange={setTab}
             tabs={[
-              { value: 'activity', label: 'Activité', count: c.activities?.length ?? 0 },
-              { value: 'details', label: 'Détails' },
+              { value: 'activity', label: t('Activité'), count: c.activities?.length ?? 0 },
+              { value: 'details', label: t('Détails') },
             ]}
           />
           {tab === 'activity' ? (
@@ -139,61 +140,61 @@ export default function ContactDetailPage() {
             </>
           ) : (
             <dl className="grid gap-x-8 px-4 py-2 sm:grid-cols-2">
-              <InlineField label="Prénom" value={c.firstName} onSave={save('firstName', (v) => v)} />
-              <InlineField label="Nom" value={c.lastName} onSave={save('lastName', (v) => v)} />
-              <InlineField label="Email" type="email" value={c.email} onSave={save('email')} />
-              <InlineField label="Téléphone" type="tel" value={c.phone} onSave={save('phone')} />
-              <InlineField label="Fonction" value={c.position} onSave={save('position')} />
+              <InlineField label={t("Prénom")} value={c.firstName} onSave={save('firstName', (v) => v)} />
+              <InlineField label={t("Nom")} value={c.lastName} onSave={save('lastName', (v) => v)} />
+              <InlineField label={t("Email")} type="email" value={c.email} onSave={save('email')} />
+              <InlineField label={t("Téléphone")} type="tel" value={c.phone} onSave={save('phone')} />
+              <InlineField label={t("Fonction")} value={c.position} onSave={save('position')} />
               <div className="border-b border-slate-100 py-2 [&_label]:font-normal [&_label]:text-slate-500">
                 <EntityPicker
                   kind="company"
-                  label="Entreprise"
+                  label={t("Entreprise")}
                   value={c.companyId}
                   valueLabel={c.company?.name}
                   onChange={async (companyId) => {
                     try {
                       await save('companyId')(companyId ?? '');
                     } catch (e) {
-                      toast.error(e instanceof Error ? e.message : 'Erreur');
+                      toast.error(e instanceof Error ? e.message : t('Erreur'));
                     }
                   }}
                 />
               </div>
               <InlineField
-                label="Statut"
+                label={t("Statut")}
                 type="select"
                 value={c.status}
                 display={label(CONTACT_STATUSES, c.status)}
                 options={CONTACT_STATUSES.map((s) => ({ value: s.value, label: s.label }))}
                 onSave={save('status', (v) => v)}
               />
-              <InlineField label="Source" value={c.source} onSave={save('source')} />
+              <InlineField label={t("Source")} value={c.source} onSave={save('source')} />
               <InlineField
-                label="Responsable"
+                label={t("Responsable")}
                 type="select"
                 value={c.ownerId ?? ''}
                 display={<Owner owner={c.owner} />}
-                options={[{ value: '', label: '— Non attribué —' }, ...(users ?? []).filter((u) => u.active).map((u) => ({ value: u.id, label: u.name }))]}
+                options={[{ value: '', label: t('— Non attribué —') }, ...(users ?? []).filter((u) => u.active).map((u) => ({ value: u.id, label: u.name }))]}
                 onSave={save('ownerId')}
               />
-              <InlineField label="Créé le" value={formatDate(c.createdAt)} readOnly />
-              <InlineField label="Notes" type="textarea" value={c.notes} onSave={save('notes')} className="sm:col-span-2" />
+              <InlineField label={t("Créé le")} value={formatDate(c.createdAt)} readOnly />
+              <InlineField label={t("Notes")} type="textarea" value={c.notes} onSave={save('notes')} className="sm:col-span-2" />
             </dl>
           )}
         </section>
 
         <div className="space-y-6">
           <Card
-            title={`Opportunités (${c.deals?.length ?? 0})`}
+            title={t('Opportunités ({n})', { n: c.deals?.length ?? 0 })}
             actions={
               <Button size="sm" variant="ghost" onClick={() => setNewDeal(true)}>
-                <Plus className="h-4 w-4" /> Ajouter
+                <Plus className="h-4 w-4" /> {t("Ajouter")}
               </Button>
             }
           >
             <DealRows deals={c.deals ?? []} />
           </Card>
-          <Card title={`Devis & factures (${c.documents?.length ?? 0})`}>
+          <Card title={t('Devis & factures ({n})', { n: c.documents?.length ?? 0 })}>
             <DocumentRows documents={c.documents ?? []} />
           </Card>
         </div>

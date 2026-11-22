@@ -6,6 +6,7 @@ import { fullName } from '../lib/format';
 import type { Company, Contact, Deal, Paginated, User } from '../types';
 import { Field, Select, useDebounce } from './ui';
 
+import { t } from '../lib/i18n';
 type Kind = 'company' | 'contact' | 'deal';
 interface Option {
   id: string;
@@ -30,9 +31,9 @@ async function fetchOptions(kind: Kind, q: string, companyId?: string | null): P
 }
 
 const PLACEHOLDER: Record<Kind, string> = {
-  company: 'Rechercher une entreprise…',
-  contact: 'Rechercher un contact…',
-  deal: 'Rechercher une opportunité…',
+  company: t('Rechercher une entreprise…'),
+  contact: t('Rechercher un contact…'),
+  deal: t('Rechercher une opportunité…'),
 };
 
 /** Champ de recherche avec liste déroulante, pour lier une fiche (entreprise, contact, opportunité). */
@@ -67,8 +68,8 @@ export function EntityPicker({
       {(id) =>
         value ? (
           <div className="flex items-center justify-between rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm">
-            <span className="truncate">{valueLabel || 'Sélectionné'}</span>
-            <button type="button" onClick={() => onChange(null, null)} className="ml-2 text-slate-400 hover:text-slate-600" aria-label="Retirer">
+            <span className="truncate">{valueLabel || t('Sélectionné')}</span>
+            <button type="button" onClick={() => onChange(null, null)} className="ml-2 text-slate-400 hover:text-slate-600" aria-label={t("Retirer")}>
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -89,8 +90,8 @@ export function EntityPicker({
             />
             {open && (
               <ul className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-slate-200 bg-white py-1 text-sm shadow-lg">
-                {isFetching && !data && <li className="px-3 py-2 text-slate-400">Recherche…</li>}
-                {data?.length === 0 && <li className="px-3 py-2 text-slate-400">Aucun résultat</li>}
+                {isFetching && !data && <li className="px-3 py-2 text-slate-400">{t("Recherche…")}</li>}
+                {data?.length === 0 && <li className="px-3 py-2 text-slate-400">{t("Aucun résultat")}</li>}
                 {data?.map((o) => (
                   <li key={o.id}>
                     <button
@@ -121,11 +122,11 @@ export function useUsers() {
   return useQuery({ queryKey: ['users'], queryFn: () => api<User[]>('/users'), staleTime: 60_000 });
 }
 
-export function UserSelect({ label = 'Responsable', value, onChange, allowEmpty = true }: { label?: string; value: string | null; onChange: (id: string | null) => void; allowEmpty?: boolean }) {
+export function UserSelect({ label = t('Responsable'), value, onChange, allowEmpty = true }: { label?: string; value: string | null; onChange: (id: string | null) => void; allowEmpty?: boolean }) {
   const { data } = useUsers();
   return (
     <Select label={label} value={value ?? ''} onChange={(e) => onChange(e.target.value || null)}>
-      {allowEmpty && <option value="">— Non attribué —</option>}
+      {allowEmpty && <option value="">{t("— Non attribué —")}</option>}
       {data
         ?.filter((u) => u.active || u.id === value)
         .map((u) => (

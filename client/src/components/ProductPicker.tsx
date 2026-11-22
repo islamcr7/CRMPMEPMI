@@ -7,6 +7,7 @@ import { useMoney } from '../lib/format';
 import type { Product } from '../types';
 import { useDebounce } from './ui';
 
+import { t } from '../lib/i18n';
 /** Recherche dans le catalogue ; la sélection ajoute une ligne au document. */
 export function ProductPicker({ onPick }: { onPick: (p: Product) => void }) {
   const money = useMoney();
@@ -30,18 +31,18 @@ export function ProductPicker({ onPick }: { onPick: (p: Product) => void }) {
         }}
         onFocus={() => setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
-        placeholder="Ajouter depuis le catalogue…"
-        aria-label="Ajouter un produit du catalogue"
+        placeholder={t("Ajouter depuis le catalogue…")}
+        aria-label={t("Ajouter un produit du catalogue")}
         className="block w-full rounded-lg border border-slate-300 bg-white py-1.5 pl-9 pr-3 text-sm placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
       />
       {open && (
         <ul className="absolute bottom-full z-20 mb-1 max-h-64 w-full overflow-auto rounded-lg border border-slate-200 bg-white py-1 text-sm shadow-lg sm:bottom-auto sm:top-full sm:mb-0 sm:mt-1">
-          {isFetching && !data && <li className="px-3 py-2 text-slate-400">Recherche…</li>}
+          {isFetching && !data && <li className="px-3 py-2 text-slate-400">{t("Recherche…")}</li>}
           {data?.length === 0 && (
             <li className="px-3 py-2 text-slate-500">
-              Aucun produit.{' '}
+              {t("Aucun produit.")}{' '}
               <Link to="/products" className="text-indigo-600 hover:underline">
-                Gérer le catalogue
+                {t("Gérer le catalogue")}
               </Link>
             </li>
           )}

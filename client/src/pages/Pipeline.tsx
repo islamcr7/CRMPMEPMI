@@ -13,6 +13,7 @@ import { DealForm } from '../components/forms';
 import { ExportButton } from '../components/CsvImport';
 import { confirmDialog, toast } from '../components/feedback';
 
+import { t } from '../lib/i18n';
 const COLUMN_ACCENT: Record<DealStage, string> = {
   NEW: 'border-t-slate-400',
   QUALIFIED: 'border-t-blue-500',
@@ -60,7 +61,7 @@ export default function PipelinePage() {
       toast.error(e.message);
     },
     onSuccess: (d) => {
-      if (d.stage === 'WON') toast.success(`🎉 « ${d.title} » gagnée !`);
+      if (d.stage === 'WON') toast.success(t('🎉 « {title} » gagnée !', { title: d.title }));
     },
     onSettled: () => qc.invalidateQueries(),
   });
@@ -69,7 +70,7 @@ export default function PipelinePage() {
     mutationFn: (id: string) => api(`/deals/${id}`, 'DELETE'),
     onSuccess: () => {
       qc.invalidateQueries();
-      toast.success('Opportunité supprimée');
+      toast.success(t('Opportunité supprimée'));
     },
     onError: (e) => toast.error(e.message),
   });
@@ -82,26 +83,26 @@ export default function PipelinePage() {
   return (
     <>
       <PageHeader
-        title="Pipeline commercial"
-        subtitle={deals && `${open.length} opportunités en cours · ${money(total)} · pondéré ${money(weighted)}`}
+        title={t("Pipeline commercial")}
+        subtitle={deals && t('{n} opportunités en cours · {total} · pondéré {weighted}', { n: open.length, total: money(total), weighted: money(weighted) })}
         actions={
           <>
           <ExportButton entity="deals" />
           <Button onClick={() => setCreatingIn('NEW')}>
-            <Plus className="h-4 w-4" /> Nouvelle opportunité
+            <Plus className="h-4 w-4" /> {t("Nouvelle opportunité")}
           </Button>
           </>
         }
       />
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-        <SearchInput value={q} onChange={setQ} placeholder="Intitulé ou entreprise…" />
+        <SearchInput value={q} onChange={setQ} placeholder={t("Intitulé ou entreprise…")} />
         <Select value={mine ? 'mine' : 'all'} onChange={(e) => setMine(e.target.value === 'mine')} className="sm:w-48">
-          <option value="all">Toute l’équipe</option>
-          <option value="mine">Mes opportunités</option>
+          <option value="all">{t("Toute l’équipe")}</option>
+          <option value="mine">{t("Mes opportunités")}</option>
         </Select>
         <label className="flex items-center gap-2 text-sm text-slate-600">
           <input type="checkbox" checked={showClosed} onChange={(e) => setShowClosed(e.target.checked)} className="rounded border-slate-300" />
-          Afficher gagnées / perdues
+          {t("Afficher gagnées / perdues")}
         </label>
       </div>
       <ErrorBox error={error} />
@@ -137,7 +138,7 @@ export default function PipelinePage() {
                       </div>
                       <div className="text-xs tabular-nums text-slate-500">{money(sum)}</div>
                     </div>
-                    <button onClick={() => setCreatingIn(col.value)} className="rounded p-1 text-slate-400 hover:bg-white hover:text-slate-700" aria-label={`Ajouter dans ${col.label}`}>
+                    <button onClick={() => setCreatingIn(col.value)} className="rounded p-1 text-slate-400 hover:bg-white hover:text-slate-700" aria-label={t('Ajouter dans {column}', { column: col.label })}>
                       <Plus className="h-4 w-4" />
                     </button>
                   </div>
@@ -155,11 +156,11 @@ export default function PipelinePage() {
                           <button
                             onClick={async (e) => {
                               e.stopPropagation();
-                              if (await confirmDialog({ title: `Supprimer « ${d.title} » ?`, message: 'Ses activités seront également supprimées.', confirmLabel: 'Supprimer', danger: true }))
+                              if (await confirmDialog({ title: t('Supprimer « {name} » ?', { name: d.title }), message: t('Ses activités seront également supprimées.'), confirmLabel: t('Supprimer'), danger: true }))
                                 remove.mutate(d.id);
                             }}
                             className="shrink-0 text-slate-300 opacity-0 hover:text-red-600 group-hover:opacity-100"
-                            aria-label="Supprimer"
+                            aria-label={t("Supprimer")}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>

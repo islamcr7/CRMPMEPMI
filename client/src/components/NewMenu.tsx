@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Building2, CalendarPlus, ChevronDown, FilePlus, KanbanSquare, Plus, Receipt, UserPlus } from 'lucide-react';
 import { ActivityForm, CompanyForm, ContactForm, DealForm } from './forms';
 
+import { t } from '../lib/i18n';
 type FormKind = 'contact' | 'company' | 'deal' | 'activity';
 
 /** Bouton « + Nouveau » toujours visible : créer n'importe quelle fiche depuis n'importe où. */
@@ -25,12 +26,12 @@ export function NewMenu() {
   }, [open]);
 
   const items: { label: string; icon: typeof Plus; run: () => void }[] = [
-    { label: 'Contact', icon: UserPlus, run: () => setForm('contact') },
-    { label: 'Entreprise', icon: Building2, run: () => setForm('company') },
-    { label: 'Opportunité', icon: KanbanSquare, run: () => setForm('deal') },
-    { label: 'Activité / tâche', icon: CalendarPlus, run: () => setForm('activity') },
-    { label: 'Devis', icon: FilePlus, run: () => navigate('/documents/new/QUOTE') },
-    { label: 'Facture', icon: Receipt, run: () => navigate('/documents/new/INVOICE') },
+    { label: t('Contact'), icon: UserPlus, run: () => setForm('contact') },
+    { label: t('Entreprise'), icon: Building2, run: () => setForm('company') },
+    { label: t('Opportunité'), icon: KanbanSquare, run: () => setForm('deal') },
+    { label: t('Activité / tâche'), icon: CalendarPlus, run: () => setForm('activity') },
+    { label: t('Devis'), icon: FilePlus, run: () => navigate('/documents/new/QUOTE') },
+    { label: t('Facture'), icon: Receipt, run: () => navigate('/documents/new/INVOICE') },
   ];
 
   return (
@@ -42,7 +43,7 @@ export function NewMenu() {
         className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-on-accent shadow-sm hover:bg-indigo-700"
       >
         <Plus className="h-4 w-4" />
-        <span className="hidden sm:inline">Nouveau</span>
+        <span className="hidden sm:inline">{t("Nouveau")}</span>
         <ChevronDown className="hidden h-3.5 w-3.5 opacity-80 sm:block" />
       </button>
       {open && (

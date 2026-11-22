@@ -5,17 +5,18 @@ import { useSettings } from '../lib/format';
 import type { Organization } from '../types';
 import { Button, Card, ErrorBox, Input, PageHeader, Select, Spinner, Textarea } from '../components/ui';
 
+import { t } from '../lib/i18n';
 const CURRENCIES = [
-  ['EUR', 'Euro (€)'],
-  ['DZD', 'Dinar algérien (DA)'],
-  ['MAD', 'Dirham marocain (DH)'],
-  ['TND', 'Dinar tunisien (DT)'],
+  ['EUR', t('Euro (€)')],
+  ['DZD', t('Dinar algérien (DA)')],
+  ['MAD', t('Dirham marocain (DH)')],
+  ['TND', t('Dinar tunisien (DT)')],
   ['XOF', 'Franc CFA BCEAO'],
   ['XAF', 'Franc CFA BEAC'],
-  ['CHF', 'Franc suisse'],
-  ['CAD', 'Dollar canadien'],
-  ['USD', 'Dollar US'],
-  ['GBP', 'Livre sterling'],
+  ['CHF', t('Franc suisse')],
+  ['CAD', t('Dollar canadien')],
+  ['USD', t('Dollar US')],
+  ['GBP', t('Livre sterling')],
 ];
 
 type Form = Record<keyof Organization, string>;
@@ -68,13 +69,13 @@ export default function SettingsPage() {
   return (
     <form onSubmit={submit}>
       <PageHeader
-        title="Paramètres"
-        subtitle="Informations de votre entreprise, reprises sur les devis et factures"
+        title={t("Paramètres")}
+        subtitle={t("Informations de votre entreprise, reprises sur les devis et factures")}
         actions={
           <>
-            {saved && <span className="text-sm text-emerald-600">Enregistré ✓</span>}
+            {saved && <span className="text-sm text-emerald-600">{t("Enregistré ✓")}</span>}
             <Button type="submit" loading={save.isPending}>
-              Enregistrer
+              {t("Enregistrer")}
             </Button>
           </>
         }
@@ -83,32 +84,32 @@ export default function SettingsPage() {
         <ErrorBox error={save.error} />
       </div>
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card title="Identité de l’entreprise">
+        <Card title={t("Identité de l’entreprise")}>
           <div className="grid gap-4 p-4 sm:grid-cols-2">
-            <Input label="Raison sociale *" value={f.name} onChange={set('name')} required className="sm:col-span-2" />
-            <Input label="Forme juridique" value={f.legalForm} onChange={set('legalForm')} placeholder="SARL, SAS, EURL…" />
-            <Input label="Identifiant fiscal" value={f.taxId} onChange={set('taxId')} placeholder="SIRET, NIF, ICE…" />
-            <Input label="N° registre du commerce" value={f.registryNumber} onChange={set('registryNumber')} />
-            <Input label="Téléphone" value={f.phone} onChange={set('phone')} />
-            <Input label="Email" type="email" value={f.email} onChange={set('email')} className="sm:col-span-2" />
-            <Input label="Adresse" value={f.address} onChange={set('address')} className="sm:col-span-2" />
-            <Input label="Ville" value={f.city} onChange={set('city')} />
-            <Input label="Pays" value={f.country} onChange={set('country')} />
+            <Input label={t("Raison sociale *")} value={f.name} onChange={set('name')} required className="sm:col-span-2" />
+            <Input label={t("Forme juridique")} value={f.legalForm} onChange={set('legalForm')} placeholder={t("SARL, SAS, EURL…")} />
+            <Input label={t("Identifiant fiscal")} value={f.taxId} onChange={set('taxId')} placeholder={t("SIRET, NIF, ICE…")} />
+            <Input label={t("N° registre du commerce")} value={f.registryNumber} onChange={set('registryNumber')} />
+            <Input label={t("Téléphone")} value={f.phone} onChange={set('phone')} />
+            <Input label={t("Email")} type="email" value={f.email} onChange={set('email')} className="sm:col-span-2" />
+            <Input label={t("Adresse")} value={f.address} onChange={set('address')} className="sm:col-span-2" />
+            <Input label={t("Ville")} value={f.city} onChange={set('city')} />
+            <Input label={t("Pays")} value={f.country} onChange={set('country')} />
           </div>
         </Card>
-        <Card title="Facturation">
+        <Card title={t("Facturation")}>
           <div className="grid gap-4 p-4 sm:grid-cols-2">
-            <Select label="Devise" value={f.currency} onChange={set('currency')}>
+            <Select label={t("Devise")} value={f.currency} onChange={set('currency')}>
               {CURRENCIES.map(([code, name]) => (
                 <option key={code} value={code}>
                   {code} — {name}
                 </option>
               ))}
             </Select>
-            <Input label="TVA par défaut (%)" type="number" min="0" max="100" step="0.01" value={f.defaultTaxRate} onChange={set('defaultTaxRate')} />
-            <Input label="Délai de paiement (jours)" type="number" min="0" max="365" value={f.paymentTerms} onChange={set('paymentTerms')} />
-            <Textarea label="Coordonnées bancaires (RIB / IBAN)" value={f.bankDetails} onChange={set('bankDetails')} className="sm:col-span-2" />
-            <Textarea label="Mentions de pied de page" value={f.documentFooter} onChange={set('documentFooter')} className="sm:col-span-2" />
+            <Input label={t("TVA par défaut (%)")} type="number" min="0" max="100" step="0.01" value={f.defaultTaxRate} onChange={set('defaultTaxRate')} />
+            <Input label={t("Délai de paiement (jours)")} type="number" min="0" max="365" value={f.paymentTerms} onChange={set('paymentTerms')} />
+            <Textarea label={t("Coordonnées bancaires (RIB / IBAN)")} value={f.bankDetails} onChange={set('bankDetails')} className="sm:col-span-2" />
+            <Textarea label={t("Mentions de pied de page")} value={f.documentFooter} onChange={set('documentFooter')} className="sm:col-span-2" />
           </div>
         </Card>
       </div>

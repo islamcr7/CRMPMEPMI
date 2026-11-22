@@ -9,20 +9,21 @@ import type { DocumentSummary, DocumentType, Paginated } from '../types';
 import { Badge, Button, Card, EmptyState, ErrorBox, PageHeader, Pagination, SearchInput, Select, Spinner, useDebounce } from '../components/ui';
 import { ExportButton } from '../components/CsvImport';
 
+import { t } from '../lib/i18n';
 /** Badges de statut d'un document (gère avoirs, paiements partiels, retards). */
 export function DocumentStatusBadges({ d }: { d: DocumentSummary }) {
-  if (d.type === 'CREDIT_NOTE') return <Badge tone="violet">Avoir émis</Badge>;
+  if (d.type === 'CREDIT_NOTE') return <Badge tone="violet">{t("Avoir émis")}</Badge>;
   const paid = Number(d.amountPaid);
   const late = d.type === 'INVOICE' && d.status === 'SENT' && isOverdue(d.dueDate);
   return (
     <div className="flex flex-wrap gap-1">
       {d.type === 'INVOICE' && d.status === 'SENT' && paid > 0 ? (
-        <Badge tone="cyan">Partiellement payée</Badge>
+        <Badge tone="cyan">{t("Partiellement payée")}</Badge>
       ) : (
-        <Badge tone={DOC_STATUSES[d.status].tone}>{d.type === 'INVOICE' && d.status === 'SENT' ? 'Émise' : DOC_STATUSES[d.status].label}</Badge>
+        <Badge tone={DOC_STATUSES[d.status].tone}>{d.type === 'INVOICE' && d.status === 'SENT' ? t('Émise') : DOC_STATUSES[d.status].label}</Badge>
       )}
-      {late && <Badge tone="red">En retard</Badge>}
-      {d.reminderCount > 0 && d.status === 'SENT' && <Badge tone="amber">{d.reminderCount} relance(s)</Badge>}
+      {late && <Badge tone="red">{t("En retard")}</Badge>}
+      {d.reminderCount > 0 && d.status === 'SENT' && <Badge tone="amber">{d.reminderCount} {t("relance(s)")}</Badge>}
     </div>
   );
 }
@@ -48,47 +49,47 @@ export default function DocumentsPage({ type }: { type: DocumentType }) {
   return (
     <>
       <PageHeader
-        title={isInvoice ? 'Factures & avoirs' : 'Devis'}
-        subtitle={data ? `${data.total} document(s)` : undefined}
+        title={isInvoice ? t('Factures & avoirs') : t('Devis')}
+        subtitle={data ? t('{n} document(s)', { n: data.total }) : undefined}
         actions={
           <>
             {isInvoice && <ExportButton entity="invoices" />}
             <Button onClick={() => navigate(`/documents/new/${type}`)}>
-              <Plus className="h-4 w-4" /> {isInvoice ? 'Nouvelle facture' : 'Nouveau devis'}
+              <Plus className="h-4 w-4" /> {isInvoice ? t('Nouvelle facture') : t('Nouveau devis')}
             </Button>
           </>
         }
       />
       <Card>
         <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row">
-          <SearchInput value={q} onChange={(v) => (setQ(v), setPage(1))} placeholder="Numéro ou client…" />
+          <SearchInput value={q} onChange={(v) => (setQ(v), setPage(1))} placeholder={t("Numéro ou client…")} />
           <Select value={status} onChange={(e) => (setStatus(e.target.value), setPage(1))} className="sm:w-52">
-            <option value="">Tous les statuts</option>
+            <option value="">{t("Tous les statuts")}</option>
             {statuses.map((s) => (
               <option key={s} value={s}>
-                {isInvoice && s === 'SENT' ? 'Émise (à encaisser)' : DOC_STATUSES[s].label}
+                {isInvoice && s === 'SENT' ? t('Émise (à encaisser)') : DOC_STATUSES[s].label}
               </option>
             ))}
-            {isInvoice && <option value="OVERDUE">En retard de paiement</option>}
+            {isInvoice && <option value="OVERDUE">{t("En retard de paiement")}</option>}
           </Select>
         </div>
         <ErrorBox error={error} />
         {isLoading ? (
           <Spinner />
         ) : !data?.items.length ? (
-          <EmptyState title="Aucun document" />
+          <EmptyState title={t("Aucun document")} />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
                 <tr>
-                  <th className="px-4 py-2.5">Numéro</th>
-                  <th className="px-4 py-2.5">Client</th>
-                  <th className="hidden px-4 py-2.5 md:table-cell">Date</th>
-                  <th className="hidden px-4 py-2.5 md:table-cell">{isInvoice ? 'Échéance' : 'Validité'}</th>
-                  <th className="px-4 py-2.5 text-right">Total TTC</th>
-                  {isInvoice && <th className="hidden px-4 py-2.5 text-right lg:table-cell">Reste dû</th>}
-                  <th className="px-4 py-2.5">Statut</th>
+                  <th className="px-4 py-2.5">{t("Numéro")}</th>
+                  <th className="px-4 py-2.5">{t("Client")}</th>
+                  <th className="hidden px-4 py-2.5 md:table-cell">{t("Date")}</th>
+                  <th className="hidden px-4 py-2.5 md:table-cell">{isInvoice ? t('Échéance') : t('Validité')}</th>
+                  <th className="px-4 py-2.5 text-right">{t("Total TTC")}</th>
+                  {isInvoice && <th className="hidden px-4 py-2.5 text-right lg:table-cell">{t("Reste dû")}</th>}
+                  <th className="px-4 py-2.5">{t("Statut")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -100,9 +101,9 @@ export default function DocumentsPage({ type }: { type: DocumentType }) {
                     <tr key={d.id} className="cursor-pointer hover:bg-slate-50" onClick={() => navigate(`/documents/${d.id}`)}>
                       <td className="px-4 py-3">
                         <Link to={`/documents/${d.id}`} className="font-medium text-slate-900 hover:text-indigo-600" onClick={(e) => e.stopPropagation()}>
-                          {d.number.startsWith('BROUILLON-') ? 'Brouillon' : d.number}
+                          {d.number.startsWith('BROUILLON-') ? t('Brouillon') : d.number}
                         </Link>
-                        {credit && <div className="text-xs text-violet-600">Avoir</div>}
+                        {credit && <div className="text-xs text-violet-600">{t("Avoir")}</div>}
                       </td>
                       <td className="px-4 py-3 text-slate-700">
                         {d.company?.name}

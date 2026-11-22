@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AlertTriangle, CheckCircle2, Info, X, XCircle } from 'lucide-react';
 
+import { t } from '../lib/i18n';
 /* ======================================================================
  * Notifications « toast » et fenêtre de confirmation.
  * Petit bus d'événements : appelables partout (composants, mutations, QueryClient).
@@ -82,17 +83,17 @@ export function FeedbackRoot() {
   return (
     <>
       <div aria-live="polite" className="no-print pointer-events-none fixed bottom-4 right-4 z-[60] flex w-[calc(100%-2rem)] max-w-sm flex-col gap-2">
-        {toasts.map((t) => {
-          const { icon: Icon, cls } = TOAST_STYLE[t.kind];
+        {toasts.map((item) => {
+          const { icon: Icon, cls } = TOAST_STYLE[item.kind];
           return (
             <div
-              key={t.id}
-              role={t.kind === 'error' ? 'alert' : 'status'}
+              key={item.id}
+              role={item.kind === 'error' ? 'alert' : 'status'}
               className="toast-in pointer-events-auto flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-lg"
             >
               <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${cls}`} />
-              <p className="flex-1">{t.message}</p>
-              <button onClick={() => setToasts((l) => l.filter((x) => x.id !== t.id))} className="text-slate-400 hover:text-slate-600" aria-label="Fermer la notification">
+              <p className="flex-1">{item.message}</p>
+              <button onClick={() => setToasts((l) => l.filter((x) => x.id !== item.id))} className="text-slate-400 hover:text-slate-600" aria-label={t("Fermer la notification")}>
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -124,7 +125,7 @@ export function FeedbackRoot() {
             </div>
             <div className="mt-5 flex justify-end gap-2">
               <button onClick={() => close(false)} className="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                Annuler
+                {t("Annuler")}
               </button>
               <button
                 ref={confirmBtn}
@@ -133,7 +134,7 @@ export function FeedbackRoot() {
                   request.danger ? 'bg-red-600 hover:bg-red-700 focus-visible:ring-red-500' : 'bg-indigo-600 hover:bg-indigo-700 focus-visible:ring-indigo-500'
                 }`}
               >
-                {request.confirmLabel ?? 'Confirmer'}
+                {request.confirmLabel ?? t('Confirmer')}
               </button>
             </div>
           </div>

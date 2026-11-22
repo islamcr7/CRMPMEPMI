@@ -11,6 +11,7 @@ import { EntityPicker } from '../components/pickers';
 import { ProductPicker } from '../components/ProductPicker';
 import { toast } from '../components/feedback';
 
+import { t } from '../lib/i18n';
 interface LineState {
   key: number;
   description: string;
@@ -98,7 +99,7 @@ export default function DocumentEditorPage() {
     mutationFn: (body: unknown) => (isEdit ? api<DocumentFull>(`/documents/${id}`, 'PATCH', body) : api<DocumentFull>('/documents', 'POST', body)),
     onSuccess: (doc) => {
       qc.invalidateQueries();
-      toast.success('Brouillon enregistré');
+      toast.success(t('Brouillon enregistré'));
       navigate(`/documents/${doc.id}`, { replace: true });
     },
   });
@@ -108,7 +109,7 @@ export default function DocumentEditorPage() {
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!company.id) {
-      toast.error('Veuillez choisir un client');
+      toast.error(t('Veuillez choisir un client'));
       return;
     }
     save.mutate({
@@ -130,10 +131,14 @@ export default function DocumentEditorPage() {
 
   if ((isEdit && existing.isLoading) || !initialized) return <Spinner />;
   if (existing.data && existing.data.status !== 'DRAFT') {
-    return <ErrorBox error={new Error('Ce document a été émis et ne peut plus être modifié.')} />;
+    return <ErrorBox error={new Error(t('Ce document a été émis et ne peut plus être modifié.'))} />;
   }
 
-  const title = isEdit ? `Modifier ${DOC_TYPES[type].label.toLowerCase()} ${existing.data?.number}` : type === 'QUOTE' ? 'Nouveau devis' : 'Nouvelle facture';
+  const title = isEdit
+    ? t('Modifier {doc} {number}', { doc: DOC_TYPES[type].label.toLowerCase(), number: existing.data?.number })
+    : type === 'QUOTE'
+      ? t('Nouveau devis')
+      : t('Nouvelle facture');
 
   return (
     <form onSubmit={submit}>
@@ -145,10 +150,10 @@ export default function DocumentEditorPage() {
         actions={
           <>
             <Button type="button" variant="secondary" onClick={() => navigate(-1)}>
-              Annuler
+              {t("Annuler")}
             </Button>
             <Button type="submit" loading={save.isPending}>
-              Enregistrer le brouillon
+              {t("Enregistrer le brouillon")}
             </Button>
           </>
         }
@@ -159,35 +164,35 @@ export default function DocumentEditorPage() {
 
       <Card className="mb-6">
         <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
-          <EntityPicker kind="company" label="Client" required value={company.id} valueLabel={company.name} onChange={(id, name) => setCompany({ id, name })} />
-          <EntityPicker kind="contact" label="Contact" value={contact.id} valueLabel={contact.name} companyId={company.id} onChange={(id, name) => setContact({ id, name })} />
-          <EntityPicker kind="deal" label="Opportunité liée" value={deal.id} valueLabel={deal.name} companyId={company.id} onChange={(id, name) => setDeal({ id, name })} />
-          <Input label="Date d’émission" type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />
+          <EntityPicker kind="company" label={t("Client")} required value={company.id} valueLabel={company.name} onChange={(id, name) => setCompany({ id, name })} />
+          <EntityPicker kind="contact" label={t("Contact")} value={contact.id} valueLabel={contact.name} companyId={company.id} onChange={(id, name) => setContact({ id, name })} />
+          <EntityPicker kind="deal" label={t("Opportunité liée")} value={deal.id} valueLabel={deal.name} companyId={company.id} onChange={(id, name) => setDeal({ id, name })} />
+          <Input label={t("Date d’émission")} type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />
           <Input
-            label={type === 'QUOTE' ? 'Valable jusqu’au' : 'Date d’échéance'}
+            label={type === 'QUOTE' ? t('Valable jusqu’au') : t('Date d’échéance')}
             type="date"
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
-            placeholder="Auto"
+            placeholder={t("Auto")}
           />
         </div>
         {type === 'INVOICE' && !isEdit && (
           <p className="border-t border-slate-100 px-4 py-2 text-xs text-slate-500">
-            La facture reçoit un numéro provisoire ; son numéro définitif (séquentiel) est attribué lors de l’émission.
+            {t("La facture reçoit un numéro provisoire ; son numéro définitif (séquentiel) est attribué lors de l’émission.")}
           </p>
         )}
       </Card>
 
-      <Card title="Lignes">
+      <Card title={t("Lignes")}>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-sm">
             <thead className="bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
               <tr>
-                <th className="px-3 py-2">Désignation</th>
-                <th className="w-24 px-3 py-2">Qté</th>
-                <th className="w-32 px-3 py-2">P.U. HT</th>
-                <th className="w-24 px-3 py-2">TVA %</th>
-                <th className="w-32 px-3 py-2 text-right">Total HT</th>
+                <th className="px-3 py-2">{t("Désignation")}</th>
+                <th className="w-24 px-3 py-2">{t("Qté")}</th>
+                <th className="w-32 px-3 py-2">{t("P.U. HT")}</th>
+                <th className="w-24 px-3 py-2">{t("TVA %")}</th>
+                <th className="w-32 px-3 py-2 text-right">{t("Total HT")}</th>
                 <th className="w-10" />
               </tr>
             </thead>
@@ -195,7 +200,7 @@ export default function DocumentEditorPage() {
               {lines.map((l) => (
                 <tr key={l.key}>
                   <td className="px-3 py-2">
-                    <Input value={l.description} onChange={(e) => updateLine(l.key, { description: e.target.value })} required placeholder="Produit ou prestation" />
+                    <Input value={l.description} onChange={(e) => updateLine(l.key, { description: e.target.value })} required placeholder={t("Produit ou prestation")} />
                   </td>
                   <td className="px-3 py-2">
                     <Input type="number" step="0.01" min="0" value={l.quantity} onChange={(e) => updateLine(l.key, { quantity: e.target.value })} required />
@@ -213,7 +218,7 @@ export default function DocumentEditorPage() {
                       onClick={() => setLines((ls) => ls.filter((x) => x.key !== l.key))}
                       disabled={lines.length === 1}
                       className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-30"
-                      aria-label="Supprimer la ligne"
+                      aria-label={t("Supprimer la ligne")}
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -226,7 +231,7 @@ export default function DocumentEditorPage() {
         <div className="flex flex-col gap-4 border-t border-slate-100 p-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Button type="button" variant="secondary" size="sm" onClick={() => setLines((ls) => [...ls, { key: lineKey++, description: '', quantity: '1', unitPrice: '', taxRate: defaultTax }])}>
-              <Plus className="h-4 w-4" /> Ajouter une ligne
+              <Plus className="h-4 w-4" /> {t("Ajouter une ligne")}
             </Button>
             <ProductPicker
               onPick={(p) =>
@@ -241,15 +246,15 @@ export default function DocumentEditorPage() {
           </div>
           <dl className="w-full space-y-1 text-sm sm:w-64">
             <div className="flex justify-between">
-              <dt className="text-slate-500">Total HT</dt>
+              <dt className="text-slate-500">{t("Total HT")}</dt>
               <dd className="tabular-nums">{money(totals.subtotal)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-slate-500">TVA</dt>
+              <dt className="text-slate-500">{t("TVA")}</dt>
               <dd className="tabular-nums">{money(totals.tax)}</dd>
             </div>
             <div className="flex justify-between border-t border-slate-200 pt-1 text-base font-semibold">
-              <dt>Total TTC</dt>
+              <dt>{t("Total TTC")}</dt>
               <dd className="tabular-nums">{money(totals.total)}</dd>
             </div>
           </dl>
@@ -258,7 +263,7 @@ export default function DocumentEditorPage() {
 
       <Card className="mt-6">
         <div className="p-4">
-          <Textarea label="Conditions / notes (imprimées sur le document)" value={notes} onChange={(e) => setNotes(e.target.value)} />
+          <Textarea label={t("Conditions / notes (imprimées sur le document)")} value={notes} onChange={(e) => setNotes(e.target.value)} />
         </div>
       </Card>
     </form>

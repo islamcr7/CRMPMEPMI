@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from './api';
+import { locale } from './i18n';
 import type { Money, Organization } from '../types';
 
 export function useSettings() {
@@ -9,7 +10,7 @@ export function useSettings() {
 export function formatMoney(value: Money | null | undefined, currency = 'EUR', compact = false) {
   const n = Number(value ?? 0);
   try {
-    return new Intl.NumberFormat('fr-FR', {
+    return new Intl.NumberFormat(locale(), {
       style: 'currency',
       currency,
       maximumFractionDigits: compact ? 0 : 2,
@@ -30,7 +31,7 @@ export function useMoney() {
 export function formatDate(value: string | Date | null | undefined, withTime = false) {
   if (!value) return '—';
   const d = new Date(value);
-  return d.toLocaleDateString('fr-FR', {
+  return d.toLocaleDateString(locale(), {
     day: '2-digit',
     month: 'short',
     year: 'numeric',

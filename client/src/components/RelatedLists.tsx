@@ -4,9 +4,10 @@ import { CONTACT_STATUSES, DOC_STATUSES, DOC_TYPES, STAGES, label, tone } from '
 import type { Contact, Deal, DocumentSummary } from '../types';
 import { Badge, EmptyState } from './ui';
 
+import { t } from '../lib/i18n';
 export function DealRows({ deals }: { deals: Deal[] }) {
   const money = useMoney();
-  if (!deals.length) return <EmptyState title="Aucune opportunité" />;
+  if (!deals.length) return <EmptyState title={t("Aucune opportunité")} />;
   return (
     <ul className="divide-y divide-slate-100">
       {deals.map((d) => (
@@ -15,7 +16,7 @@ export function DealRows({ deals }: { deals: Deal[] }) {
             <div className="min-w-0">
               <div className="truncate text-sm font-medium text-slate-800">{d.title}</div>
               <div className="text-xs text-slate-500">
-                {d.expectedCloseDate ? `Clôture ${formatDate(d.expectedCloseDate)}` : 'Sans date'} · {d.probability} %
+                {d.expectedCloseDate ? t('Clôture {date}', { date: formatDate(d.expectedCloseDate) }) : t('Sans date')} · {d.probability} %
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-2">
@@ -30,7 +31,7 @@ export function DealRows({ deals }: { deals: Deal[] }) {
 }
 
 export function ContactRows({ contacts }: { contacts: Contact[] }) {
-  if (!contacts.length) return <EmptyState title="Aucun contact" />;
+  if (!contacts.length) return <EmptyState title={t("Aucun contact")} />;
   return (
     <ul className="divide-y divide-slate-100">
       {contacts.map((c) => (
@@ -50,7 +51,7 @@ export function ContactRows({ contacts }: { contacts: Contact[] }) {
 
 export function DocumentRows({ documents }: { documents: DocumentSummary[] }) {
   const money = useMoney();
-  if (!documents.length) return <EmptyState title="Aucun devis ni facture" />;
+  if (!documents.length) return <EmptyState title={t("Aucun devis ni facture")} />;
   return (
     <ul className="divide-y divide-slate-100">
       {documents.map((d) => (
@@ -67,7 +68,7 @@ export function DocumentRows({ documents }: { documents: DocumentSummary[] }) {
                 {d.type === 'CREDIT_NOTE' ? '−' : ''}
                 {money(d.total)}
               </span>
-              {d.type === 'CREDIT_NOTE' ? <Badge tone="violet">Avoir</Badge> : <Badge tone={DOC_STATUSES[d.status].tone}>{DOC_STATUSES[d.status].label}</Badge>}
+              {d.type === 'CREDIT_NOTE' ? <Badge tone="violet">{t("Avoir")}</Badge> : <Badge tone={DOC_STATUSES[d.status].tone}>{DOC_STATUSES[d.status].label}</Badge>}
             </div>
           </Link>
         </li>

@@ -15,6 +15,7 @@ import { ActivityComposer, InlineField, RecordHeader, Tabs, Timeline, useFieldSa
 import { Owner } from '../components/OwnerCell';
 import { useUsers } from '../components/pickers';
 
+import { t } from '../lib/i18n';
 export default function CompanyDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -32,7 +33,7 @@ export default function CompanyDetailPage() {
     mutationFn: () => api(`/companies/${id}`, 'DELETE'),
     onSuccess: () => {
       qc.invalidateQueries();
-      toast.success('Entreprise supprimée');
+      toast.success(t('Entreprise supprimée'));
       navigate('/companies');
     },
     onError: (e) => toast.error(e.message),
@@ -49,35 +50,35 @@ export default function CompanyDetailPage() {
   return (
     <>
       <Link to="/companies" className="mb-3 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700">
-        <ArrowLeft className="h-4 w-4" /> Entreprises
+        <ArrowLeft className="h-4 w-4" /> {t("Entreprises")}
       </Link>
 
       <RecordHeader
         icon={Building2}
-        typeLabel="Entreprise"
+        typeLabel={t("Entreprise")}
         title={c.name}
         actions={
           <>
             <Button variant="secondary" onClick={() => setModal('contact')}>
-              <Plus className="h-4 w-4" /> Contact
+              <Plus className="h-4 w-4" /> {t("Contact")}
             </Button>
             <Button variant="secondary" onClick={() => setModal('deal')}>
-              <Plus className="h-4 w-4" /> Opportunité
+              <Plus className="h-4 w-4" /> {t("Opportunité")}
             </Button>
             <Link to={`/documents/new/QUOTE?companyId=${c.id}`}>
               <Button>
-                <FilePlus className="h-4 w-4" /> Devis
+                <FilePlus className="h-4 w-4" /> {t("Devis")}
               </Button>
             </Link>
             <Button
               variant="danger"
-              aria-label="Supprimer l’entreprise"
+              aria-label={t("Supprimer l’entreprise")}
               loading={remove.isPending}
               onClick={async () =>
                 (await confirmDialog({
-                  title: `Supprimer « ${c.name} » ?`,
-                  message: 'Les activités liées seront supprimées. Les contacts et opportunités sont conservés, sans entreprise.',
-                  confirmLabel: 'Supprimer',
+                  title: t('Supprimer « {name} » ?', { name: c.name }),
+                  message: t('Les activités liées seront supprimées. Les contacts et opportunités sont conservés, sans entreprise.'),
+                  confirmLabel: t('Supprimer'),
                   danger: true,
                 })) && remove.mutate()
               }
@@ -87,9 +88,9 @@ export default function CompanyDetailPage() {
           </>
         }
         highlights={[
-          { label: 'Secteur', value: c.industry },
+          { label: t('Secteur'), value: c.industry },
           {
-            label: 'Téléphone',
+            label: t('Téléphone'),
             value: c.phone && (
               <a href={`tel:${c.phone}`} className="inline-flex items-center gap-1 text-indigo-600 hover:underline">
                 <Phone className="h-3 w-3" /> {c.phone}
@@ -97,16 +98,16 @@ export default function CompanyDetailPage() {
             ),
           },
           {
-            label: 'Site web',
+            label: t('Site web'),
             value: website && (
               <a href={website} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-indigo-600 hover:underline">
                 <Globe className="h-3 w-3" /> {c.website}
               </a>
             ),
           },
-          { label: 'Opportunités en cours', value: `${openDeals.length} · ${money(openDeals.reduce((s, d) => s + Number(d.amount), 0), true)}` },
-          { label: 'CA gagné', value: money(wonTotal, true) },
-          { label: 'Responsable', value: <Owner owner={c.owner} /> },
+          { label: t('Opportunités en cours'), value: `${openDeals.length} · ${money(openDeals.reduce((s, d) => s + Number(d.amount), 0), true)}` },
+          { label: t('CA gagné'), value: money(wonTotal, true) },
+          { label: t('Responsable'), value: <Owner owner={c.owner} /> },
         ]}
       />
 
@@ -116,8 +117,8 @@ export default function CompanyDetailPage() {
             value={tab}
             onChange={setTab}
             tabs={[
-              { value: 'activity', label: 'Activité', count: c.activities?.length ?? 0 },
-              { value: 'details', label: 'Détails' },
+              { value: 'activity', label: t('Activité'), count: c.activities?.length ?? 0 },
+              { value: 'details', label: t('Détails') },
             ]}
           />
           {tab === 'activity' ? (
@@ -127,33 +128,33 @@ export default function CompanyDetailPage() {
             </>
           ) : (
             <dl className="grid gap-x-8 px-4 py-2 sm:grid-cols-2">
-              <InlineField label="Raison sociale" value={c.name} onSave={save('name', (v) => v)} />
-              <InlineField label="Identifiant fiscal" value={c.taxId} onSave={save('taxId')} />
-              <InlineField label="Secteur d’activité" value={c.industry} onSave={save('industry')} />
+              <InlineField label={t("Raison sociale")} value={c.name} onSave={save('name', (v) => v)} />
+              <InlineField label={t("Identifiant fiscal")} value={c.taxId} onSave={save('taxId')} />
+              <InlineField label={t("Secteur d’activité")} value={c.industry} onSave={save('industry')} />
               <InlineField
-                label="Effectif"
+                label={t("Effectif")}
                 type="select"
                 value={c.size ?? ''}
-                display={c.size ? `${c.size} salariés` : undefined}
-                options={[{ value: '', label: '—' }, ...COMPANY_SIZES.map((s) => ({ value: s, label: `${s} salariés` }))]}
+                display={c.size ? t('{n} salariés', { n: c.size }) : undefined}
+                options={[{ value: '', label: '—' }, ...COMPANY_SIZES.map((s) => ({ value: s, label: t('{n} salariés', { n: s }) }))]}
                 onSave={save('size')}
               />
-              <InlineField label="Email" type="email" value={c.email} onSave={save('email')} />
-              <InlineField label="Téléphone" type="tel" value={c.phone} onSave={save('phone')} />
-              <InlineField label="Site web" type="url" value={c.website} onSave={save('website')} />
+              <InlineField label={t("Email")} type="email" value={c.email} onSave={save('email')} />
+              <InlineField label={t("Téléphone")} type="tel" value={c.phone} onSave={save('phone')} />
+              <InlineField label={t("Site web")} type="url" value={c.website} onSave={save('website')} />
               <InlineField
-                label="Responsable"
+                label={t("Responsable")}
                 type="select"
                 value={c.ownerId ?? ''}
                 display={<Owner owner={c.owner} />}
-                options={[{ value: '', label: '— Non attribué —' }, ...(users ?? []).filter((u) => u.active).map((u) => ({ value: u.id, label: u.name }))]}
+                options={[{ value: '', label: t('— Non attribué —') }, ...(users ?? []).filter((u) => u.active).map((u) => ({ value: u.id, label: u.name }))]}
                 onSave={save('ownerId')}
               />
-              <InlineField label="Adresse" value={c.address} onSave={save('address')} className="sm:col-span-2" />
-              <InlineField label="Ville" value={c.city} onSave={save('city')} />
-              <InlineField label="Pays" value={c.country} onSave={save('country')} />
-              <InlineField label="Notes" type="textarea" value={c.notes} onSave={save('notes')} className="sm:col-span-2" />
-              <InlineField label="Créée le" value={formatDate(c.createdAt)} readOnly />
+              <InlineField label={t("Adresse")} value={c.address} onSave={save('address')} className="sm:col-span-2" />
+              <InlineField label={t("Ville")} value={c.city} onSave={save('city')} />
+              <InlineField label={t("Pays")} value={c.country} onSave={save('country')} />
+              <InlineField label={t("Notes")} type="textarea" value={c.notes} onSave={save('notes')} className="sm:col-span-2" />
+              <InlineField label={t("Créée le")} value={formatDate(c.createdAt)} readOnly />
             </dl>
           )}
         </section>
@@ -163,23 +164,23 @@ export default function CompanyDetailPage() {
             title={`Contacts (${c.contacts?.length ?? 0})`}
             actions={
               <Button size="sm" variant="ghost" onClick={() => setModal('contact')}>
-                <Plus className="h-4 w-4" /> Ajouter
+                <Plus className="h-4 w-4" /> {t("Ajouter")}
               </Button>
             }
           >
             <ContactRows contacts={c.contacts ?? []} />
           </Card>
           <Card
-            title={`Opportunités (${deals.length})`}
+            title={t('Opportunités ({n})', { n: deals.length })}
             actions={
               <Button size="sm" variant="ghost" onClick={() => setModal('deal')}>
-                <Plus className="h-4 w-4" /> Ajouter
+                <Plus className="h-4 w-4" /> {t("Ajouter")}
               </Button>
             }
           >
             <DealRows deals={deals} />
           </Card>
-          <Card title={`Devis & factures (${c.documents?.length ?? 0})`}>
+          <Card title={t('Devis & factures ({n})', { n: c.documents?.length ?? 0 })}>
             <DocumentRows documents={c.documents ?? []} />
           </Card>
         </div>

@@ -9,12 +9,13 @@ import { ActivityForm } from '../components/forms';
 import { ActivityList } from '../components/ActivityList';
 import { useUsers } from '../components/pickers';
 
+import { t } from '../lib/i18n';
 const TABS = [
-  { key: 'open', label: 'À faire', params: { status: 'open' } },
-  { key: 'overdue', label: 'En retard', params: { status: 'open', range: 'overdue' } },
-  { key: 'today', label: 'Aujourd’hui', params: { status: 'open', range: 'today' } },
-  { key: 'week', label: '7 prochains jours', params: { status: 'open', range: 'week' } },
-  { key: 'done', label: 'Terminées', params: { status: 'done' } },
+  { key: 'open', label: t('À faire'), params: { status: 'open' } },
+  { key: 'overdue', label: t('En retard'), params: { status: 'open', range: 'overdue' } },
+  { key: 'today', label: t('Aujourd’hui'), params: { status: 'open', range: 'today' } },
+  { key: 'week', label: t('7 prochains jours'), params: { status: 'open', range: 'week' } },
+  { key: 'done', label: t('Terminées'), params: { status: 'done' } },
 ] as const;
 
 export default function ActivitiesPage() {
@@ -35,11 +36,11 @@ export default function ActivitiesPage() {
   return (
     <>
       <PageHeader
-        title="Activités"
-        subtitle="Appels, rendez-vous, relances et notes"
+        title={t("Activités")}
+        subtitle={t("Appels, rendez-vous, relances et notes")}
         actions={
           <Button onClick={() => setCreating(true)}>
-            <Plus className="h-4 w-4" /> Nouvelle activité
+            <Plus className="h-4 w-4" /> {t("Nouvelle activité")}
           </Button>
         }
       />
@@ -59,17 +60,17 @@ export default function ActivitiesPage() {
           <div className="flex flex-col gap-2 sm:flex-row">
             <SearchInput value={q} onChange={setQ} />
             <Select value={assignee} onChange={(e) => setAssignee(e.target.value)} className="sm:w-48">
-              <option value="">Toute l’équipe</option>
+              <option value="">{t("Toute l’équipe")}</option>
               {users?.map((u) => (
                 <option key={u.id} value={u.id}>
-                  {u.id === user?.id ? `Moi (${u.name})` : u.name}
+                  {u.id === user?.id ? t('Moi ({name})', { name: u.name }) : u.name}
                 </option>
               ))}
             </Select>
           </div>
         </div>
         <ErrorBox error={error} />
-        {isLoading ? <Spinner /> : <ActivityList items={data ?? []} emptyText="Aucune activité dans cette vue" />}
+        {isLoading ? <Spinner /> : <ActivityList items={data ?? []} emptyText={t("Aucune activité dans cette vue")} />}
       </Card>
       {creating && <ActivityForm open onClose={() => setCreating(false)} />}
     </>

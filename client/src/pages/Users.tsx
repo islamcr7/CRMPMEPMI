@@ -9,6 +9,7 @@ import { Badge, Button, Card, ErrorBox, FormActions, Input, Modal, PageHeader, S
 import { useUsers } from '../components/pickers';
 import { toast } from '../components/feedback';
 
+import { t } from '../lib/i18n';
 function UserForm({ user, onClose }: { user?: User; onClose: () => void }) {
   const qc = useQueryClient();
   const [name, setName] = useState(user?.name ?? '');
@@ -30,17 +31,17 @@ function UserForm({ user, onClose }: { user?: User; onClose: () => void }) {
     save.mutate();
   };
   return (
-    <Modal open onClose={onClose} title={user ? 'Modifier l’utilisateur' : 'Nouvel utilisateur'}>
+    <Modal open onClose={onClose} title={user ? t('Modifier l’utilisateur') : t('Nouvel utilisateur')}>
       <form onSubmit={submit} className="space-y-4">
         <ErrorBox error={save.error} />
-        <Input label="Nom complet *" value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
-        <Input label="Email *" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={!!user} />
-        <Select label="Rôle" value={role} onChange={(e) => setRole(e.target.value as Role)}>
-          <option value="SALES">Commercial</option>
-          <option value="ADMIN">Administrateur</option>
+        <Input label={t("Nom complet *")} value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
+        <Input label={t("Email *")} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={!!user} />
+        <Select label={t("Rôle")} value={role} onChange={(e) => setRole(e.target.value as Role)}>
+          <option value="SALES">{t("Commercial")}</option>
+          <option value="ADMIN">{t("Administrateur")}</option>
         </Select>
         <Input
-          label={user ? 'Nouveau mot de passe (laisser vide pour ne pas changer)' : 'Mot de passe initial *'}
+          label={user ? t('Nouveau mot de passe (laisser vide pour ne pas changer)') : t('Mot de passe initial *')}
           type="password"
           autoComplete="new-password"
           minLength={8}
@@ -63,7 +64,7 @@ export default function UsersPage() {
     mutationFn: (u: User) => api(`/users/${u.id}`, 'PATCH', { active: !u.active }),
     onSuccess: (_d, u) => {
       qc.invalidateQueries({ queryKey: ['users'] });
-      toast.success(u.active ? `${u.name} est désactivé(e)` : `${u.name} est réactivé(e)`);
+      toast.success(u.active ? t('{name} est désactivé(e)', { name: u.name }) : t('{name} est réactivé(e)', { name: u.name }));
     },
     onError: (e) => toast.error(e.message),
   });
@@ -71,11 +72,11 @@ export default function UsersPage() {
   return (
     <>
       <PageHeader
-        title="Utilisateurs"
-        subtitle="Gérez les accès de votre équipe"
+        title={t("Utilisateurs")}
+        subtitle={t("Gérez les accès de votre équipe")}
         actions={
           <Button onClick={() => setEditing('new')}>
-            <Plus className="h-4 w-4" /> Nouvel utilisateur
+            <Plus className="h-4 w-4" /> {t("Nouvel utilisateur")}
           </Button>
         }
       />
@@ -88,11 +89,11 @@ export default function UsersPage() {
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
                 <tr>
-                  <th className="px-4 py-2.5">Nom</th>
-                  <th className="hidden px-4 py-2.5 sm:table-cell">Email</th>
-                  <th className="px-4 py-2.5">Rôle</th>
-                  <th className="px-4 py-2.5">Statut</th>
-                  <th className="hidden px-4 py-2.5 md:table-cell">Créé le</th>
+                  <th className="px-4 py-2.5">{t("Nom")}</th>
+                  <th className="hidden px-4 py-2.5 sm:table-cell">{t("Email")}</th>
+                  <th className="px-4 py-2.5">{t("Rôle")}</th>
+                  <th className="px-4 py-2.5">{t("Statut")}</th>
+                  <th className="hidden px-4 py-2.5 md:table-cell">{t("Créé le")}</th>
                   <th className="px-4 py-2.5" />
                 </tr>
               </thead>
@@ -100,23 +101,23 @@ export default function UsersPage() {
                 {data?.map((u) => (
                   <tr key={u.id}>
                     <td className="px-4 py-3 font-medium text-slate-800">
-                      {u.name} {u.id === me?.id && <span className="text-xs font-normal text-slate-400">(vous)</span>}
+                      {u.name} {u.id === me?.id && <span className="text-xs font-normal text-slate-400">{t("(vous)")}</span>}
                     </td>
                     <td className="hidden px-4 py-3 text-slate-600 sm:table-cell">{u.email}</td>
                     <td className="px-4 py-3">
-                      <Badge tone={u.role === 'ADMIN' ? 'violet' : 'blue'}>{u.role === 'ADMIN' ? 'Admin' : 'Commercial'}</Badge>
+                      <Badge tone={u.role === 'ADMIN' ? 'violet' : 'blue'}>{u.role === 'ADMIN' ? t('Admin') : t('Commercial')}</Badge>
                     </td>
                     <td className="px-4 py-3">
-                      <Badge tone={u.active ? 'green' : 'slate'}>{u.active ? 'Actif' : 'Désactivé'}</Badge>
+                      <Badge tone={u.active ? 'green' : 'slate'}>{u.active ? t('Actif') : t('Désactivé')}</Badge>
                     </td>
                     <td className="hidden px-4 py-3 text-slate-600 md:table-cell">{formatDate(u.createdAt)}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-right">
                       <Button size="sm" variant="ghost" onClick={() => setEditing(u)}>
-                        Modifier
+                        {t("Modifier")}
                       </Button>
                       {u.id !== me?.id && (
                         <Button size="sm" variant="ghost" onClick={() => toggle.mutate(u)}>
-                          {u.active ? 'Désactiver' : 'Réactiver'}
+                          {u.active ? t('Désactiver') : t('Réactiver')}
                         </Button>
                       )}
                     </td>

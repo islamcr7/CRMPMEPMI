@@ -7,6 +7,7 @@ import { formatDate, fullName, useMoney } from '../lib/format';
 import type { Collections } from '../types';
 import { Badge, Button, Card, EmptyState, ErrorBox, PageHeader, Spinner } from '../components/ui';
 
+import { t, tMaybe } from '../lib/i18n';
 const BUCKET_COLORS = ['bg-slate-400', 'bg-amber-400', 'bg-orange-500', 'bg-red-500', 'bg-red-700'];
 
 export default function CollectionsPage() {
@@ -20,7 +21,7 @@ export default function CollectionsPage() {
     mutationFn: (id: string) => api<{ reminderCount: number; email: { to: string; subject: string; body: string } }>(`/documents/${id}/reminders`, 'POST'),
     onSuccess: ({ reminderCount, email }) => {
       qc.invalidateQueries();
-      setNotice(`Relance n°${reminderCount} enregistrée. Votre messagerie s’ouvre avec l’email prérempli${email.to ? '' : ' (aucune adresse email connue pour ce client)'}.`);
+      setNotice(t('Relance n°{n} enregistrée. Votre messagerie s’ouvre avec l’email prérempli.', { n: reminderCount }) + (email.to ? '' : ' ' + t('(aucune adresse email connue pour ce client)')));
       window.location.href = `mailto:${encodeURIComponent(email.to)}?subject=${encodeURIComponent(email.subject)}&body=${encodeURIComponent(email.body)}`;
     },
   });
@@ -33,25 +34,25 @@ export default function CollectionsPage() {
 
   return (
     <>
-      <PageHeader title="Recouvrement" subtitle="Factures émises non soldées, balance âgée et relances" />
+      <PageHeader title={t("Recouvrement")} subtitle={t("Factures émises non soldées, balance âgée et relances")} />
 
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="text-xs font-medium text-slate-500">Reste à encaisser</div>
+          <div className="text-xs font-medium text-slate-500">{t("Reste à encaisser")}</div>
           <div className="mt-1 text-xl font-semibold tabular-nums text-slate-900">{money(data.summary.outstanding)}</div>
-          <div className="text-xs text-slate-500">{data.summary.count} facture(s)</div>
+          <div className="text-xs text-slate-500">{data.summary.count} {t("facture(s)")}</div>
         </div>
         <div className="rounded-xl border border-red-200 bg-red-50/50 p-4 shadow-sm">
-          <div className="text-xs font-medium text-red-700">Dont en retard</div>
+          <div className="text-xs font-medium text-red-700">{t("Dont en retard")}</div>
           <div className="mt-1 text-xl font-semibold tabular-nums text-red-700">{money(data.summary.overdue)}</div>
-          <div className="text-xs text-red-600">{data.summary.overdueCount} facture(s) échue(s)</div>
+          <div className="text-xs text-red-600">{data.summary.overdueCount} {t("facture(s) échue(s)")}</div>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-2 text-xs font-medium text-slate-500">Balance âgée</div>
+          <div className="mb-2 text-xs font-medium text-slate-500">{t("Balance âgée")}</div>
           <div className="space-y-1">
             {data.buckets.map((b, i) => (
               <div key={b.key} className="flex items-center gap-2 text-xs">
-                <span className="w-16 shrink-0 text-slate-500">{b.label}</span>
+                <span className="w-16 shrink-0 text-slate-500">{tMaybe(b.label)}</span>
                 <div className="h-2 flex-1 rounded-full bg-slate-100">
                   <div className={`h-2 rounded-full ${BUCKET_COLORS[i]}`} style={{ width: `${(b.amount / maxBucket) * 100}%` }} />
                 </div>
@@ -66,26 +67,26 @@ export default function CollectionsPage() {
       <ErrorBox error={remind.error} />
 
       <Card
-        title={onlyLate ? 'Factures en retard' : 'Toutes les factures à encaisser'}
+        title={onlyLate ? t('Factures en retard') : t('Toutes les factures à encaisser')}
         actions={
           <label className="flex items-center gap-2 text-sm text-slate-600">
             <input type="checkbox" checked={onlyLate} onChange={(e) => setOnlyLate(e.target.checked)} className="rounded border-slate-300" />
-            En retard uniquement
+            {t("En retard uniquement")}
           </label>
         }
       >
         {items.length === 0 ? (
-          <EmptyState title={onlyLate ? 'Aucune facture en retard 🎉' : 'Aucune facture à encaisser'} />
+          <EmptyState title={onlyLate ? t('Aucune facture en retard 🎉') : t('Aucune facture à encaisser')} />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
                 <tr>
-                  <th className="px-4 py-2.5">Facture</th>
-                  <th className="px-4 py-2.5">Client</th>
-                  <th className="hidden px-4 py-2.5 md:table-cell">Échéance</th>
-                  <th className="px-4 py-2.5 text-right">Reste dû</th>
-                  <th className="hidden px-4 py-2.5 lg:table-cell">Relances</th>
+                  <th className="px-4 py-2.5">{t("Facture")}</th>
+                  <th className="px-4 py-2.5">{t("Client")}</th>
+                  <th className="hidden px-4 py-2.5 md:table-cell">{t("Échéance")}</th>
+                  <th className="px-4 py-2.5 text-right">{t("Reste dû")}</th>
+                  <th className="hidden px-4 py-2.5 lg:table-cell">{t("Relances")}</th>
                   <th className="px-4 py-2.5" />
                 </tr>
               </thead>
@@ -121,25 +122,25 @@ export default function CollectionsPage() {
                       </td>
                       <td className="hidden px-4 py-3 md:table-cell">
                         <div className="text-slate-600">{formatDate(i.dueDate)}</div>
-                        {i.daysLate > 0 ? <Badge tone={i.daysLate > 60 ? 'red' : 'amber'}>{i.daysLate} j de retard</Badge> : <span className="text-xs text-slate-400">non échue</span>}
+                        {i.daysLate > 0 ? <Badge tone={i.daysLate > 60 ? 'red' : 'amber'}>{i.daysLate} {t("j de retard")}</Badge> : <span className="text-xs text-slate-400">{t("non échue")}</span>}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="font-semibold tabular-nums text-slate-900">{money(i.remaining)}</div>
-                        {Number(i.amountPaid) > 0 && <div className="text-xs text-slate-400">sur {money(i.total)}</div>}
+                        {Number(i.amountPaid) > 0 && <div className="text-xs text-slate-400">{t("sur")} {money(i.total)}</div>}
                       </td>
                       <td className="hidden px-4 py-3 text-xs text-slate-500 lg:table-cell">
                         {i.reminderCount > 0 ? (
                           <>
-                            {i.reminderCount} relance(s)
-                            <div>dernière : {formatDate(i.lastReminderAt)}</div>
+                            {i.reminderCount} {t("relance(s)")}
+                            <div>{t("dernière :")} {formatDate(i.lastReminderAt)}</div>
                           </>
                         ) : (
-                          'Aucune'
+                          t('Aucune')
                         )}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <Button size="sm" variant="secondary" onClick={() => remind.mutate(i.id)} loading={remind.isPending && remind.variables === i.id}>
-                          <BellRing className="h-3.5 w-3.5" /> Relancer
+                          <BellRing className="h-3.5 w-3.5" /> {t("Relancer")}
                         </Button>
                       </td>
                     </tr>

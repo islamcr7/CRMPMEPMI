@@ -10,6 +10,7 @@ import { ErrorBox, FormActions, Input, Modal, Select, Textarea } from './ui';
 import { EntityPicker, UserSelect } from './pickers';
 import { toast } from './feedback';
 
+import { t } from '../lib/i18n';
 /** Mutation qui rafraîchit toutes les données après succès (simple et toujours cohérent). */
 function useSave<T>(path: string, id?: string) {
   const qc = useQueryClient();
@@ -17,7 +18,7 @@ function useSave<T>(path: string, id?: string) {
     mutationFn: (body: unknown) => api<T>(id ? `${path}/${id}` : path, id ? 'PATCH' : 'POST', body),
     onSuccess: () => {
       qc.invalidateQueries();
-      toast.success(id ? 'Modifications enregistrées' : 'Créé avec succès');
+      toast.success(id ? t('Modifications enregistrées') : t('Créé avec succès'));
     },
   });
 }
@@ -53,29 +54,29 @@ export function CompanyForm({ open, onClose, company, onSaved }: { open: boolean
     save.mutate(f, { onSuccess: (c) => (onSaved?.(c), onClose()) });
   };
   return (
-    <Modal open={open} onClose={onClose} title={company ? 'Modifier l’entreprise' : 'Nouvelle entreprise'} wide>
+    <Modal open={open} onClose={onClose} title={company ? t('Modifier l’entreprise') : t('Nouvelle entreprise')} wide>
       <form onSubmit={submit} className="space-y-4">
         <ErrorBox error={save.error} />
         <div className="grid gap-4 sm:grid-cols-2">
-          <Input label="Raison sociale *" value={f.name} onChange={set('name')} required autoFocus className="sm:col-span-2" />
-          <Input label="Secteur d’activité" value={f.industry} onChange={set('industry')} />
-          <Select label="Effectif" value={f.size} onChange={set('size')}>
+          <Input label={t("Raison sociale *")} value={f.name} onChange={set('name')} required autoFocus className="sm:col-span-2" />
+          <Input label={t("Secteur d’activité")} value={f.industry} onChange={set('industry')} />
+          <Select label={t("Effectif")} value={f.size} onChange={set('size')}>
             <option value="">—</option>
             {COMPANY_SIZES.map((s) => (
               <option key={s} value={s}>
-                {s} salariés
+                {s} {t("salariés")}
               </option>
             ))}
           </Select>
-          <Input label="Identifiant fiscal (SIRET, NIF, ICE…)" value={f.taxId} onChange={set('taxId')} />
-          <Input label="Site web" value={f.website} onChange={set('website')} />
-          <Input label="Email" type="email" value={f.email} onChange={set('email')} />
-          <Input label="Téléphone" value={f.phone} onChange={set('phone')} />
-          <Input label="Adresse" value={f.address} onChange={set('address')} className="sm:col-span-2" />
-          <Input label="Ville" value={f.city} onChange={set('city')} />
-          <Input label="Pays" value={f.country} onChange={set('country')} />
+          <Input label={t("Identifiant fiscal (SIRET, NIF, ICE…)")} value={f.taxId} onChange={set('taxId')} />
+          <Input label={t("Site web")} value={f.website} onChange={set('website')} />
+          <Input label={t("Email")} type="email" value={f.email} onChange={set('email')} />
+          <Input label={t("Téléphone")} value={f.phone} onChange={set('phone')} />
+          <Input label={t("Adresse")} value={f.address} onChange={set('address')} className="sm:col-span-2" />
+          <Input label={t("Ville")} value={f.city} onChange={set('city')} />
+          <Input label={t("Pays")} value={f.country} onChange={set('country')} />
           <UserSelect value={f.ownerId} onChange={(ownerId) => patch({ ownerId })} />
-          <Textarea label="Notes" value={f.notes} onChange={set('notes')} className="sm:col-span-2" />
+          <Textarea label={t("Notes")} value={f.notes} onChange={set('notes')} className="sm:col-span-2" />
         </div>
         <FormActions onCancel={onClose} loading={save.isPending} />
       </form>
@@ -119,26 +120,26 @@ export function ContactForm({
     save.mutate(body, { onSuccess: (c) => (onSaved?.(c), onClose()) });
   };
   return (
-    <Modal open={open} onClose={onClose} title={contact ? 'Modifier le contact' : 'Nouveau contact'} wide>
+    <Modal open={open} onClose={onClose} title={contact ? t('Modifier le contact') : t('Nouveau contact')} wide>
       <form onSubmit={submit} className="space-y-4">
         <ErrorBox error={save.error} />
         <div className="grid gap-4 sm:grid-cols-2">
-          <Input label="Prénom *" value={f.firstName} onChange={set('firstName')} required autoFocus />
-          <Input label="Nom *" value={f.lastName} onChange={set('lastName')} required />
-          <Input label="Email" type="email" value={f.email} onChange={set('email')} />
-          <Input label="Téléphone" value={f.phone} onChange={set('phone')} />
-          <EntityPicker kind="company" label="Entreprise" value={f.companyId} valueLabel={f.companyName} onChange={(companyId, companyName) => patch({ companyId, companyName })} />
-          <Input label="Fonction" value={f.position} onChange={set('position')} />
-          <Select label="Statut" value={f.status} onChange={set('status')}>
+          <Input label={t("Prénom *")} value={f.firstName} onChange={set('firstName')} required autoFocus />
+          <Input label={t("Nom *")} value={f.lastName} onChange={set('lastName')} required />
+          <Input label={t("Email")} type="email" value={f.email} onChange={set('email')} />
+          <Input label={t("Téléphone")} value={f.phone} onChange={set('phone')} />
+          <EntityPicker kind="company" label={t("Entreprise")} value={f.companyId} valueLabel={f.companyName} onChange={(companyId, companyName) => patch({ companyId, companyName })} />
+          <Input label={t("Fonction")} value={f.position} onChange={set('position')} />
+          <Select label={t("Statut")} value={f.status} onChange={set('status')}>
             {CONTACT_STATUSES.map((s) => (
               <option key={s.value} value={s.value}>
                 {s.label}
               </option>
             ))}
           </Select>
-          <Input label="Source" value={f.source} onChange={set('source')} placeholder="Salon, site web, recommandation…" />
+          <Input label={t("Source")} value={f.source} onChange={set('source')} placeholder={t("Salon, site web, recommandation…")} />
           <UserSelect value={f.ownerId} onChange={(ownerId) => patch({ ownerId })} />
-          <Textarea label="Notes" value={f.notes} onChange={set('notes')} className="sm:col-span-2" />
+          <Textarea label={t("Notes")} value={f.notes} onChange={set('notes')} className="sm:col-span-2" />
         </div>
         <FormActions onCancel={onClose} loading={save.isPending} />
       </form>
@@ -186,47 +187,47 @@ export function DealForm({
     );
   };
   return (
-    <Modal open={open} onClose={onClose} title={deal ? 'Modifier l’opportunité' : 'Nouvelle opportunité'} wide>
+    <Modal open={open} onClose={onClose} title={deal ? t('Modifier l’opportunité') : t('Nouvelle opportunité')} wide>
       <form onSubmit={submit} className="space-y-4">
         <ErrorBox error={save.error} />
         <div className="grid gap-4 sm:grid-cols-2">
-          <Input label="Intitulé *" value={f.title} onChange={set('title')} required autoFocus className="sm:col-span-2" />
-          <Input label="Montant HT" type="number" min="0" step="0.01" value={f.amount} onChange={set('amount')} />
-          <Select label="Étape" value={f.stage} onChange={(e) => patch({ stage: e.target.value as DealStage, probability: '' })}>
+          <Input label={t("Intitulé *")} value={f.title} onChange={set('title')} required autoFocus className="sm:col-span-2" />
+          <Input label={t("Montant HT")} type="number" min="0" step="0.01" value={f.amount} onChange={set('amount')} />
+          <Select label={t("Étape")} value={f.stage} onChange={(e) => patch({ stage: e.target.value as DealStage, probability: '' })}>
             {STAGES.map((s) => (
               <option key={s.value} value={s.value}>
                 {s.label}
               </option>
             ))}
           </Select>
-          <Input label="Probabilité (%)" type="number" min="0" max="100" value={f.probability} onChange={set('probability')} placeholder="Auto selon l’étape" />
-          <Input label="Clôture prévue" type="date" value={f.expectedCloseDate} onChange={set('expectedCloseDate')} />
+          <Input label={t("Probabilité (%)")} type="number" min="0" max="100" value={f.probability} onChange={set('probability')} placeholder={t("Auto selon l’étape")} />
+          <Input label={t("Clôture prévue")} type="date" value={f.expectedCloseDate} onChange={set('expectedCloseDate')} />
           <EntityPicker
             kind="company"
-            label="Entreprise"
+            label={t("Entreprise")}
             value={f.companyId}
             valueLabel={f.companyName}
             onChange={(companyId, companyName) => patch({ companyId, companyName })}
           />
           <EntityPicker
             kind="contact"
-            label="Contact"
+            label={t("Contact")}
             value={f.contactId}
             valueLabel={f.contactName}
             companyId={f.companyId}
             onChange={(contactId, contactName) => patch({ contactId, contactName })}
           />
           <UserSelect value={f.ownerId} onChange={(ownerId) => patch({ ownerId })} />
-          <Textarea label="Notes" value={f.notes} onChange={set('notes')} className="sm:col-span-2" />
+          <Textarea label={t("Notes")} value={f.notes} onChange={set('notes')} className="sm:col-span-2" />
         </div>
         {deal && (
           <div className="flex flex-wrap gap-4 border-t border-slate-100 pt-3 text-sm">
             <Link to={`/documents/new/QUOTE?dealId=${deal.id}`} className="font-medium text-indigo-600 hover:underline">
-              Créer un devis pour cette opportunité →
+              {t("Créer un devis pour cette opportunité →")}
             </Link>
             {deal.company && (
               <Link to={`/companies/${deal.company.id}`} className="text-slate-500 hover:underline">
-                Voir l’entreprise
+                {t("Voir l’entreprise")}
               </Link>
             )}
           </div>
@@ -270,31 +271,31 @@ export function ActivityForm({ open, onClose, activity, defaults }: { open: bool
     save.mutate({ ...rest, dueDate: fromDateTimeInput(dueDate) }, { onSuccess: () => onClose() });
   };
   return (
-    <Modal open={open} onClose={onClose} title={activity ? 'Modifier l’activité' : 'Nouvelle activité'} wide>
+    <Modal open={open} onClose={onClose} title={activity ? t('Modifier l’activité') : t('Nouvelle activité')} wide>
       <form onSubmit={submit} className="space-y-4">
         <ErrorBox error={save.error} />
         <div className="grid gap-4 sm:grid-cols-2">
-          <Select label="Type" value={f.type} onChange={set('type')}>
+          <Select label={t("Type")} value={f.type} onChange={set('type')}>
             {ACTIVITY_TYPES.map((t) => (
               <option key={t.value} value={t.value}>
                 {t.label}
               </option>
             ))}
           </Select>
-          <Input label="Échéance" type="datetime-local" value={f.dueDate} onChange={set('dueDate')} />
-          <Input label="Objet *" value={f.subject} onChange={set('subject')} required autoFocus className="sm:col-span-2" />
-          <Textarea label="Description / compte rendu" value={f.description} onChange={set('description')} className="sm:col-span-2" />
-          <EntityPicker kind="company" label="Entreprise" value={f.companyId} valueLabel={f.companyName} onChange={(companyId, companyName) => patch({ companyId, companyName })} />
+          <Input label={t("Échéance")} type="datetime-local" value={f.dueDate} onChange={set('dueDate')} />
+          <Input label={t("Objet *")} value={f.subject} onChange={set('subject')} required autoFocus className="sm:col-span-2" />
+          <Textarea label={t("Description / compte rendu")} value={f.description} onChange={set('description')} className="sm:col-span-2" />
+          <EntityPicker kind="company" label={t("Entreprise")} value={f.companyId} valueLabel={f.companyName} onChange={(companyId, companyName) => patch({ companyId, companyName })} />
           <EntityPicker
             kind="contact"
-            label="Contact"
+            label={t("Contact")}
             value={f.contactId}
             valueLabel={f.contactName}
             companyId={f.companyId}
             onChange={(contactId, contactName) => patch({ contactId, contactName })}
           />
-          <EntityPicker kind="deal" label="Opportunité" value={f.dealId} valueLabel={f.dealName} companyId={f.companyId} onChange={(dealId, dealName) => patch({ dealId, dealName })} />
-          <UserSelect label="Assigné à" value={f.assigneeId} onChange={(assigneeId) => patch({ assigneeId })} />
+          <EntityPicker kind="deal" label={t("Opportunité")} value={f.dealId} valueLabel={f.dealName} companyId={f.companyId} onChange={(dealId, dealName) => patch({ dealId, dealName })} />
+          <UserSelect label={t("Assigné à")} value={f.assigneeId} onChange={(assigneeId) => patch({ assigneeId })} />
         </div>
         <FormActions onCancel={onClose} loading={save.isPending} />
       </form>

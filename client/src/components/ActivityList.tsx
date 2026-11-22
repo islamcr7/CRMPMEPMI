@@ -10,6 +10,7 @@ import { ActivityForm } from './forms';
 import { Avatar, EmptyState } from './ui';
 import { confirmDialog, toast } from './feedback';
 
+import { t } from '../lib/i18n';
 export const ACTIVITY_ICONS: Record<ActivityType, typeof Phone> = {
   CALL: Phone,
   MEETING: Users,
@@ -18,14 +19,14 @@ export const ACTIVITY_ICONS: Record<ActivityType, typeof Phone> = {
   NOTE: StickyNote,
 };
 
-export function ActivityList({ items, showLinks = true, emptyText = 'Aucune activité' }: { items: Activity[]; showLinks?: boolean; emptyText?: string }) {
+export function ActivityList({ items, showLinks = true, emptyText = t('Aucune activité') }: { items: Activity[]; showLinks?: boolean; emptyText?: string }) {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<Activity | null>(null);
   const toggle = useMutation({
     mutationFn: (a: Activity) => api(`/activities/${a.id}`, 'PATCH', { done: !a.done }),
     onSuccess: (_d, a) => {
       qc.invalidateQueries();
-      if (!a.done) toast.success(`« ${a.subject} » terminé ✓`);
+      if (!a.done) toast.success(t('« {subject} » terminé ✓', { subject: a.subject }));
     },
     onError: (e) => toast.error(e.message),
   });
@@ -33,7 +34,7 @@ export function ActivityList({ items, showLinks = true, emptyText = 'Aucune acti
     mutationFn: (a: Activity) => api(`/activities/${a.id}`, 'DELETE'),
     onSuccess: () => {
       qc.invalidateQueries();
-      toast.success('Activité supprimée');
+      toast.success(t('Activité supprimée'));
     },
     onError: (e) => toast.error(e.message),
   });
@@ -54,7 +55,7 @@ export function ActivityList({ items, showLinks = true, emptyText = 'Aucune acti
                 <button
                   onClick={() => toggle.mutate(a)}
                   className="mt-0.5 shrink-0 text-slate-400 hover:text-indigo-600"
-                  aria-label={a.done ? 'Marquer comme à faire' : 'Marquer comme fait'}
+                  aria-label={a.done ? t('Marquer comme à faire') : t('Marquer comme fait')}
                 >
                   {a.done ? <CheckSquare className="h-5 w-5 text-emerald-600" /> : <Square className="h-5 w-5" />}
                 </button>
@@ -71,7 +72,7 @@ export function ActivityList({ items, showLinks = true, emptyText = 'Aucune acti
                     <span className={`inline-flex items-center gap-1 ${late ? 'font-medium text-red-600' : ''}`}>
                       <Calendar className="h-3 w-3" />
                       {formatDate(a.dueDate, true)}
-                      {late && ' · en retard'}
+                      {late && t(' · en retard')}
                     </span>
                   )}
                   {showLinks && a.company && (
@@ -93,13 +94,13 @@ export function ActivityList({ items, showLinks = true, emptyText = 'Aucune acti
                 </div>
               </div>
               <div className="flex shrink-0 gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
-                <button onClick={() => setEditing(a)} className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Modifier">
+                <button onClick={() => setEditing(a)} className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label={t("Modifier")}>
                   <Pencil className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={async () => (await confirmDialog({ title: 'Supprimer cette activité ?', message: a.subject, confirmLabel: 'Supprimer', danger: true })) && remove.mutate(a)}
+                  onClick={async () => (await confirmDialog({ title: t('Supprimer cette activité ?'), message: a.subject, confirmLabel: t('Supprimer'), danger: true })) && remove.mutate(a)}
                   className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-600"
-                  aria-label="Supprimer"
+                  aria-label={t("Supprimer")}
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>

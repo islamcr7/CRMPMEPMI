@@ -10,6 +10,7 @@ import { Badge, Button, Card, ErrorBox, FormActions, Input, Modal, Select, Spinn
 import { useAuth } from '../lib/auth';
 import { confirmDialog, toast } from '../components/feedback';
 
+import { locale, t } from '../lib/i18n';
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
 function PaymentModal({ doc, remaining, onClose }: { doc: DocumentFull; remaining: number; onClose: () => void }) {
@@ -23,7 +24,7 @@ function PaymentModal({ doc, remaining, onClose }: { doc: DocumentFull; remainin
     mutationFn: () => api<DocumentFull>(`/documents/${doc.id}/payments`, 'POST', { amount: Number(amount), date, method, reference }),
     onSuccess: (d) => {
       qc.invalidateQueries();
-      toast.success(d.status === 'PAID' ? `Paiement enregistré : facture ${d.number} soldée` : `Paiement de ${money(Number(amount))} enregistré`);
+      toast.success(d.status === 'PAID' ? t('Paiement enregistré : facture {number} soldée', { number: d.number }) : t('Paiement de {amount} enregistré', { amount: money(Number(amount)) }));
       onClose();
     },
   });
@@ -32,25 +33,25 @@ function PaymentModal({ doc, remaining, onClose }: { doc: DocumentFull; remainin
     save.mutate();
   };
   return (
-    <Modal open onClose={onClose} title={`Paiement – facture ${doc.number}`}>
+    <Modal open onClose={onClose} title={t('Paiement – facture {number}', { number: doc.number })}>
       <form onSubmit={submit} className="space-y-4">
         <ErrorBox error={save.error} />
         <p className="text-sm text-slate-600">
-          Reste à payer : <span className="font-semibold text-slate-900">{money(remaining)}</span>
+          {t("Reste à payer :")} <span className="font-semibold text-slate-900">{money(remaining)}</span>
         </p>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Input label="Montant encaissé *" type="number" step="0.01" min="0.01" max={remaining} value={amount} onChange={(e) => setAmount(e.target.value)} required autoFocus />
-          <Input label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
-          <Select label="Mode de paiement" value={method} onChange={(e) => setMethod(e.target.value as PaymentMethod)}>
+          <Input label={t("Montant encaissé *")} type="number" step="0.01" min="0.01" max={remaining} value={amount} onChange={(e) => setAmount(e.target.value)} required autoFocus />
+          <Input label={t("Date")} type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+          <Select label={t("Mode de paiement")} value={method} onChange={(e) => setMethod(e.target.value as PaymentMethod)}>
             {PAYMENT_METHODS.map((m) => (
               <option key={m.value} value={m.value}>
                 {m.label}
               </option>
             ))}
           </Select>
-          <Input label="Référence" value={reference} onChange={(e) => setReference(e.target.value)} placeholder="N° chèque, libellé virement…" />
+          <Input label={t("Référence")} value={reference} onChange={(e) => setReference(e.target.value)} placeholder={t("N° chèque, libellé virement…")} />
         </div>
-        <FormActions onCancel={onClose} loading={save.isPending} submitLabel="Enregistrer le paiement" />
+        <FormActions onCancel={onClose} loading={save.isPending} submitLabel={t("Enregistrer le paiement")} />
       </form>
     </Modal>
   );
@@ -68,12 +69,12 @@ export default function DocumentViewPage() {
   const { data: doc, isLoading, error } = useQuery({ queryKey: ['document', id], queryFn: () => api<DocumentFull>(`/documents/${id}`) });
 
   const onDone = () => qc.invalidateQueries();
-  const STATUS_TOAST: Partial<Record<DocumentStatus, string>> = { SENT: 'Document émis', PAID: 'Facture soldée', REFUSED: 'Devis marqué refusé', CANCELLED: 'Devis annulé' };
+  const STATUS_TOAST: Partial<Record<DocumentStatus, string>> = { SENT: t('Document émis'), PAID: t('Facture soldée'), REFUSED: t('Devis marqué refusé'), CANCELLED: t('Devis annulé') };
   const setStatus = useMutation({
     mutationFn: (status: DocumentStatus) => api<DocumentFull>(`/documents/${id}`, 'PATCH', { status }),
     onSuccess: (d, status) => {
       onDone();
-      if (STATUS_TOAST[status]) toast.success(status === 'SENT' && d.type === 'INVOICE' ? `Facture ${d.number} émise` : STATUS_TOAST[status]!);
+      if (STATUS_TOAST[status]) toast.success(status === 'SENT' && d.type === 'INVOICE' ? t('Facture {number} émise', { number: d.number }) : STATUS_TOAST[status]!);
     },
   });
   const convert = useMutation({
@@ -94,7 +95,7 @@ export default function DocumentViewPage() {
     mutationFn: () => api<{ reminderCount: number; email: { to: string; subject: string; body: string } }>(`/documents/${id}/reminders`, 'POST'),
     onSuccess: ({ reminderCount, email }) => {
       onDone();
-      setNotice(`Relance n°${reminderCount} enregistrée dans l’historique du client. Votre messagerie s’ouvre avec un email prérempli.`);
+      setNotice(t('Relance n°{n} enregistrée dans l’historique du client. Votre messagerie s’ouvre avec un email prérempli.', { n: reminderCount }));
       window.location.href = `mailto:${encodeURIComponent(email.to)}?subject=${encodeURIComponent(email.subject)}&body=${encodeURIComponent(email.body)}`;
     },
   });
@@ -110,7 +111,7 @@ export default function DocumentViewPage() {
   if (isLoading) return <Spinner />;
   if (error || !doc) return <ErrorBox error={error} />;
 
-  const t = DOC_TYPES[doc.type];
+  const docType = DOC_TYPES[doc.type];
   const isInvoice = doc.type === 'INVOICE';
   const isCredit = doc.type === 'CREDIT_NOTE';
   const paid = Number(doc.amountPaid);
@@ -127,31 +128,31 @@ export default function DocumentViewPage() {
   }, {});
   const busy = setStatus.isPending || convert.isPending || remove.isPending || creditNote.isPending || remind.isPending;
   const confirmStatus = async (s: DocumentStatus, title: string, message?: string, danger = false) =>
-    (await confirmDialog({ title, message, danger, confirmLabel: danger ? 'Confirmer l’annulation' : 'Confirmer' })) && setStatus.mutate(s);
+    (await confirmDialog({ title, message, danger, confirmLabel: danger ? t('Confirmer l’annulation') : t('Confirmer') })) && setStatus.mutate(s);
   const statusBadge = isCredit ? (
-    <Badge tone="violet">Émis</Badge>
+    <Badge tone="violet">{t("Émis")}</Badge>
   ) : isInvoice && doc.status === 'SENT' && paid > 0 ? (
-    <Badge tone="cyan">Partiellement payée</Badge>
+    <Badge tone="cyan">{t("Partiellement payée")}</Badge>
   ) : (
-    <Badge tone={DOC_STATUSES[doc.status].tone}>{isInvoice && doc.status === 'SENT' ? 'Émise' : DOC_STATUSES[doc.status].label}</Badge>
+    <Badge tone={DOC_STATUSES[doc.status].tone}>{isInvoice && doc.status === 'SENT' ? t('Émise') : DOC_STATUSES[doc.status].label}</Badge>
   );
 
   return (
     <>
       <div className="no-print">
         <Link to={doc.type === 'QUOTE' ? '/documents/quotes' : '/documents/invoices'} className="mb-3 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700">
-          <ArrowLeft className="h-4 w-4" /> {doc.type === 'QUOTE' ? 'Devis' : 'Factures & avoirs'}
+          <ArrowLeft className="h-4 w-4" /> {doc.type === 'QUOTE' ? t('Devis') : t('Factures & avoirs')}
         </Link>
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-semibold text-slate-900">
-              {t.label} {isDraftNumber ? '(brouillon)' : doc.number}
+              {docType.label} {isDraftNumber ? t('(brouillon)') : doc.number}
             </h1>
             {statusBadge}
-            {late && <Badge tone="red">En retard</Badge>}
+            {late && <Badge tone="red">{t("En retard")}</Badge>}
             {doc.reminderCount > 0 && doc.status === 'SENT' && (
               <Badge tone="amber">
-                {doc.reminderCount} relance(s) · dernière le {formatDate(doc.lastReminderAt)}
+                {doc.reminderCount} {t("relance(s) · dernière le")} {formatDate(doc.lastReminderAt)}
               </Badge>
             )}
           </div>
@@ -160,83 +161,85 @@ export default function DocumentViewPage() {
               <>
                 <Link to={`/documents/${doc.id}/edit`}>
                   <Button variant="secondary">
-                    <Pencil className="h-4 w-4" /> Modifier
+                    <Pencil className="h-4 w-4" /> {t("Modifier")}
                   </Button>
                 </Link>
                 <Button
                   onClick={() =>
                     isInvoice
-                      ? confirmStatus('SENT', 'Émettre la facture ?', 'Un numéro définitif et séquentiel sera attribué. La facture ne sera plus modifiable.')
-                      : confirmStatus('SENT', 'Marquer le devis comme envoyé ?', 'Il ne sera plus modifiable.')
+                      ? confirmStatus('SENT', t('Émettre la facture ?'), t('Un numéro définitif et séquentiel sera attribué. La facture ne sera plus modifiable.'))
+                      : confirmStatus('SENT', t('Marquer le devis comme envoyé ?'), t('Il ne sera plus modifiable.'))
                   }
                   loading={setStatus.isPending}
                 >
-                  <Send className="h-4 w-4" /> {isInvoice ? 'Émettre' : 'Marquer envoyé'}
+                  <Send className="h-4 w-4" /> {isInvoice ? t('Émettre') : t('Marquer envoyé')}
                 </Button>
               </>
             )}
             {doc.type === 'QUOTE' && (doc.status === 'SENT' || doc.status === 'ACCEPTED') && !hasInvoice && (
               <Button
                 onClick={async () =>
-                  (await confirmDialog({ title: 'Transformer en facture ?', message: 'Une facture brouillon est créée avec les mêmes lignes. Le devis passe « accepté » et l’opportunité liée « gagnée ».', confirmLabel: 'Créer la facture' })) &&
+                  (await confirmDialog({ title: t('Transformer en facture ?'), message: t('Une facture brouillon est créée avec les mêmes lignes. Le devis passe « accepté » et l’opportunité liée « gagnée ».'), confirmLabel: t('Créer la facture') })) &&
                   convert.mutate()
                 }
                 loading={convert.isPending}
               >
-                <FileOutput className="h-4 w-4" /> Transformer en facture
+                <FileOutput className="h-4 w-4" /> {t("Transformer en facture")}
               </Button>
             )}
             {doc.type === 'QUOTE' && doc.status === 'SENT' && (
               <Button variant="secondary" onClick={() => setStatus.mutate('REFUSED')} disabled={busy}>
-                <XCircle className="h-4 w-4" /> Refusé
+                <XCircle className="h-4 w-4" /> {t("Refusé")}
               </Button>
             )}
             {isInvoice && doc.status === 'SENT' && (
               <>
                 <Button onClick={() => setPaying(true)} disabled={busy}>
-                  <Wallet className="h-4 w-4" /> Enregistrer un paiement
+                  <Wallet className="h-4 w-4" /> {t("Enregistrer un paiement")}
                 </Button>
-                <Button variant="secondary" onClick={() => confirmStatus('PAID', 'Marquer la facture comme soldée ?', `Un paiement de ${money(remaining)} (reste dû) sera enregistré à la date du jour.`)} disabled={busy}>
-                  <CheckCircle2 className="h-4 w-4" /> Soldée
+                <Button variant="secondary" onClick={() => confirmStatus('PAID', t('Marquer la facture comme soldée ?'), t('Un paiement de {amount} (reste dû) sera enregistré à la date du jour.', { amount: money(remaining) }))} disabled={busy}>
+                  <CheckCircle2 className="h-4 w-4" /> {t("Soldée")}
                 </Button>
                 <Button variant="secondary" onClick={() => remind.mutate()} loading={remind.isPending} disabled={busy}>
-                  <BellRing className="h-4 w-4" /> Relancer
+                  <BellRing className="h-4 w-4" /> {t("Relancer")}
                 </Button>
               </>
             )}
             <Button variant="secondary" onClick={() => window.print()}>
-              <Printer className="h-4 w-4" /> Imprimer / PDF
+              <Printer className="h-4 w-4" /> {t("Imprimer / PDF")}
             </Button>
             {isInvoice && (doc.status === 'SENT' || doc.status === 'PAID') && !hasCredit && (
               <Button
                 variant="danger"
                 onClick={async () =>
                   (await confirmDialog({
-                    title: `Annuler ${doc.number} par un avoir ?`,
-                    message: `Un avoir de ${money(doc.total)} est émis immédiatement et la facture passe « annulée ». Cette opération est définitive.${paid > 0 ? `\n\nAttention : ${money(paid)} déjà encaissé devra être remboursé au client.` : ''}`,
-                    confirmLabel: 'Émettre l’avoir',
+                    title: t('Annuler {number} par un avoir ?', { number: doc.number }),
+                    message:
+                      t('Un avoir de {amount} est émis immédiatement et la facture passe « annulée ». Cette opération est définitive.', { amount: money(doc.total) }) +
+                      (paid > 0 ? '\n\n' + t('Attention : {amount} déjà encaissé devra être remboursé au client.', { amount: money(paid) }) : ''),
+                    confirmLabel: t('Émettre l’avoir'),
                     danger: true,
                   })) && creditNote.mutate()
                 }
                 disabled={busy}
               >
-                <FileMinus className="h-4 w-4" /> Créer un avoir
+                <FileMinus className="h-4 w-4" /> {t("Créer un avoir")}
               </Button>
             )}
             {doc.status === 'DRAFT' ? (
               <Button
                 variant="danger"
-                onClick={async () => (await confirmDialog({ title: 'Supprimer ce brouillon ?', confirmLabel: 'Supprimer', danger: true })) && remove.mutate()}
+                onClick={async () => (await confirmDialog({ title: t('Supprimer ce brouillon ?'), confirmLabel: t('Supprimer'), danger: true })) && remove.mutate()}
                 disabled={busy}
-                aria-label="Supprimer le brouillon"
+                aria-label={t("Supprimer le brouillon")}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
             ) : (
               doc.type === 'QUOTE' &&
               doc.status !== 'CANCELLED' && (
-                <Button variant="danger" onClick={() => confirmStatus('CANCELLED', 'Annuler ce devis ?', 'Cette action est définitive.', true)} disabled={busy}>
-                  Annuler le devis
+                <Button variant="danger" onClick={() => confirmStatus('CANCELLED', t('Annuler ce devis ?'), t('Cette action est définitive.'), true)} disabled={busy}>
+                  {t("Annuler le devis")}
                 </Button>
               )
             )}
@@ -249,7 +252,7 @@ export default function DocumentViewPage() {
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-500">
               {doc.source && (
                 <span>
-                  {isCredit ? 'Annule la facture' : 'Issu du devis'}{' '}
+                  {isCredit ? t('Annule la facture') : t('Issu du devis')}{' '}
                   <Link to={`/documents/${doc.source.id}`} className="text-indigo-600 hover:underline">
                     {doc.source.number}
                   </Link>
@@ -259,22 +262,22 @@ export default function DocumentViewPage() {
                 <span key={d.id}>
                   {DOC_TYPES[d.type].label} :{' '}
                   <Link to={`/documents/${d.id}`} className="text-indigo-600 hover:underline">
-                    {d.number.startsWith('BROUILLON-') ? 'brouillon' : d.number}
+                    {d.number.startsWith('BROUILLON-') ? t('brouillon') : d.number}
                   </Link>
                 </span>
               ))}
-              {doc.deal && <span>Opportunité : {doc.deal.title}</span>}
+              {doc.deal && <span>{t("Opportunité :")} {doc.deal.title}</span>}
             </div>
           )}
         </div>
 
         {isInvoice && doc.status !== 'DRAFT' && (
           <Card
-            title={`Paiements (${doc.payments.length})`}
+            title={t('Paiements ({n})', { n: doc.payments.length })}
             className="mx-auto mb-6 max-w-4xl"
             actions={
               <span className="text-sm text-slate-600">
-                Encaissé <span className="font-semibold tabular-nums text-slate-900">{money(paid)}</span> · Reste{' '}
+                {t("Encaissé")} <span className="font-semibold tabular-nums text-slate-900">{money(paid)}</span> {t("· Reste")}{' '}
                 <span className={`font-semibold tabular-nums ${remaining > 0 ? 'text-amber-700' : 'text-emerald-700'}`}>{money(Math.max(0, remaining))}</span>
               </span>
             }
@@ -283,7 +286,7 @@ export default function DocumentViewPage() {
               <div className="h-1.5 bg-emerald-500" style={{ width: `${Math.min(100, (paid / Math.max(Number(doc.total), 0.01)) * 100)}%` }} />
             </div>
             {doc.payments.length === 0 ? (
-              <p className="px-4 py-4 text-sm text-slate-500">Aucun paiement enregistré.</p>
+              <p className="px-4 py-4 text-sm text-slate-500">{t("Aucun paiement enregistré.")}</p>
             ) : (
               <ul className="divide-y divide-slate-100">
                 {doc.payments.map((p) => (
@@ -300,11 +303,11 @@ export default function DocumentViewPage() {
                     {doc.status !== 'CANCELLED' && (user?.role === 'ADMIN' || p.createdById === user?.id) && (
                       <button
                         onClick={async () =>
-                          (await confirmDialog({ title: `Supprimer ce paiement de ${money(p.amount)} ?`, message: 'Le reste à payer de la facture sera recalculé.', confirmLabel: 'Supprimer', danger: true })) &&
+                          (await confirmDialog({ title: t('Supprimer ce paiement de {amount} ?', { amount: money(p.amount) }), message: t('Le reste à payer de la facture sera recalculé.'), confirmLabel: t('Supprimer'), danger: true })) &&
                           deletePayment.mutate(p.id)
                         }
                         className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-600"
-                        aria-label="Supprimer le paiement"
+                        aria-label={t("Supprimer le paiement")}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -328,17 +331,17 @@ export default function DocumentViewPage() {
             {(org?.city || org?.country) && <div>{[org?.city, org?.country].filter(Boolean).join(', ')}</div>}
             {org?.phone && <div>{org.phone}</div>}
             {org?.email && <div>{org.email}</div>}
-            {org?.taxId && <div>Id. fiscal : {org.taxId}</div>}
-            {org?.registryNumber && <div>RC / RCS : {org.registryNumber}</div>}
+            {org?.taxId && <div>{t("Id. fiscal :")} {org.taxId}</div>}
+            {org?.registryNumber && <div>{t("RC / RCS :")} {org.registryNumber}</div>}
           </div>
           <div className="sm:text-right">
-            <div className={`text-2xl font-bold uppercase tracking-wide ${isCredit ? 'text-violet-700' : 'text-indigo-700'}`}>{t.label}</div>
-            <div className="mt-1 text-sm text-slate-700">N° {isDraftNumber ? 'BROUILLON' : doc.number}</div>
-            <div className="text-sm text-slate-500">Date : {formatDate(doc.issueDate)}</div>
-            {isCredit && doc.source && <div className="text-sm text-slate-500">Sur facture N° {doc.source.number}</div>}
+            <div className={`text-2xl font-bold uppercase tracking-wide ${isCredit ? 'text-violet-700' : 'text-indigo-700'}`}>{docType.label}</div>
+            <div className="mt-1 text-sm text-slate-700">{t("N°")} {isDraftNumber ? t('BROUILLON') : doc.number}</div>
+            <div className="text-sm text-slate-500">{t("Date :")} {formatDate(doc.issueDate)}</div>
+            {isCredit && doc.source && <div className="text-sm text-slate-500">{t("Sur facture N°")} {doc.source.number}</div>}
             {doc.dueDate && !isCredit && (
               <div className="text-sm text-slate-500">
-                {doc.type === 'QUOTE' ? 'Valable jusqu’au' : 'Échéance'} : {formatDate(doc.dueDate)}
+                {doc.type === 'QUOTE' ? t('Valable jusqu’au') : t('Échéance')} : {formatDate(doc.dueDate)}
               </div>
             )}
           </div>
@@ -346,30 +349,30 @@ export default function DocumentViewPage() {
 
         <section className="mt-8 flex justify-end">
           <div className="w-full rounded-lg bg-slate-50 p-4 text-sm sm:w-80">
-            <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Client</div>
+            <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("Client")}</div>
             <div className="mt-1 font-semibold text-slate-900">{doc.company.name}</div>
-            {doc.contact && <div className="text-slate-600">À l’attention de {fullName(doc.contact)}</div>}
+            {doc.contact && <div className="text-slate-600">{t("À l’attention de")} {fullName(doc.contact)}</div>}
             {doc.company.address && <div className="text-slate-600">{doc.company.address}</div>}
             {(doc.company.city || doc.company.country) && <div className="text-slate-600">{[doc.company.city, doc.company.country].filter(Boolean).join(', ')}</div>}
-            {doc.company.taxId && <div className="text-slate-600">Id. fiscal : {doc.company.taxId}</div>}
+            {doc.company.taxId && <div className="text-slate-600">{t("Id. fiscal :")} {doc.company.taxId}</div>}
           </div>
         </section>
 
         <table className="mt-8 w-full text-sm">
           <thead>
             <tr className="border-b-2 border-slate-800 text-left text-xs uppercase tracking-wide text-slate-600">
-              <th className="py-2">Désignation</th>
-              <th className="py-2 text-right">Qté</th>
-              <th className="py-2 text-right">P.U. HT</th>
-              <th className="hidden py-2 text-right sm:table-cell">TVA</th>
-              <th className="py-2 text-right">Total HT</th>
+              <th className="py-2">{t("Désignation")}</th>
+              <th className="py-2 text-right">{t("Qté")}</th>
+              <th className="py-2 text-right">{t("P.U. HT")}</th>
+              <th className="hidden py-2 text-right sm:table-cell">{t("TVA")}</th>
+              <th className="py-2 text-right">{t("Total HT")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
             {doc.lines.map((l, i) => (
               <tr key={l.id ?? i}>
                 <td className="py-2.5 pr-4 text-slate-800">{l.description}</td>
-                <td className="py-2.5 text-right tabular-nums">{Number(l.quantity).toLocaleString('fr-FR')}</td>
+                <td className="py-2.5 text-right tabular-nums">{Number(l.quantity).toLocaleString(locale())}</td>
                 <td className="py-2.5 text-right tabular-nums">{money(l.unitPrice)}</td>
                 <td className="hidden py-2.5 text-right tabular-nums sm:table-cell">{Number(l.taxRate)} %</td>
                 <td className="py-2.5 text-right tabular-nums">{money(Number(l.quantity) * Number(l.unitPrice))}</td>
@@ -381,27 +384,27 @@ export default function DocumentViewPage() {
         <section className="mt-6 flex justify-end">
           <dl className="w-full space-y-1 text-sm sm:w-72">
             <div className="flex justify-between">
-              <dt className="text-slate-500">Total HT</dt>
+              <dt className="text-slate-500">{t("Total HT")}</dt>
               <dd className="tabular-nums">{money(doc.subtotal)}</dd>
             </div>
             {Object.entries(taxByRate).map(([rate, amount]) => (
               <div key={rate} className="flex justify-between">
-                <dt className="text-slate-500">TVA {rate} %</dt>
+                <dt className="text-slate-500">{t("TVA")} {rate} %</dt>
                 <dd className="tabular-nums">{money(amount)}</dd>
               </div>
             ))}
             <div className="flex justify-between border-t-2 border-slate-800 pt-2 text-base font-bold">
-              <dt>{isCredit ? 'Montant de l’avoir TTC' : 'Total TTC'}</dt>
+              <dt>{isCredit ? t('Montant de l’avoir TTC') : t('Total TTC')}</dt>
               <dd className="tabular-nums">{money(doc.total)}</dd>
             </div>
             {isInvoice && paid > 0 && doc.status !== 'CANCELLED' && (
               <>
                 <div className="flex justify-between pt-1 text-slate-600">
-                  <dt>Déjà réglé</dt>
+                  <dt>{t("Déjà réglé")}</dt>
                   <dd className="tabular-nums">− {money(paid)}</dd>
                 </div>
                 <div className="flex justify-between font-semibold">
-                  <dt>Reste à payer</dt>
+                  <dt>{t("Reste à payer")}</dt>
                   <dd className="tabular-nums">{money(Math.max(0, remaining))}</dd>
                 </div>
               </>
@@ -413,11 +416,11 @@ export default function DocumentViewPage() {
         {doc.type === 'QUOTE' && (
           <div className="mt-10 grid grid-cols-2 gap-8 text-sm text-slate-500">
             <div />
-            <div className="h-24 rounded-lg border border-dashed border-slate-300 p-3">Bon pour accord — date et signature :</div>
+            <div className="h-24 rounded-lg border border-dashed border-slate-300 p-3">{t("Bon pour accord — date et signature :")}</div>
           </div>
         )}
         <footer className="mt-10 border-t border-slate-200 pt-4 text-center text-xs text-slate-500">
-          {isInvoice && org?.paymentTerms !== undefined && <div>Paiement à {org.paymentTerms} jours.</div>}
+          {isInvoice && org?.paymentTerms !== undefined && <div>{t("Paiement à")} {org.paymentTerms} {t("jours.")}</div>}
           {org?.bankDetails && <div className="whitespace-pre-wrap">{org.bankDetails}</div>}
           {org?.documentFooter && <div className="mt-1">{org.documentFooter}</div>}
         </footer>
