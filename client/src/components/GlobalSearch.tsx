@@ -55,7 +55,7 @@ export function useSearchGroups(q: string) {
         title: 'Opportunités',
         items: data.deals.map<Item>((d) => ({
           key: `d-${d.id}`,
-          to: `/pipeline?deal=${d.id}`,
+          to: `/deals/${d.id}`,
           icon: KanbanSquare,
           title: d.title,
           sub: [d.company?.name, money(d.amount)].filter(Boolean).join(' · '),

@@ -88,6 +88,8 @@ export interface Deal {
   owner?: UserRef | null;
   createdAt: string;
   updatedAt: string;
+  activities?: Activity[];
+  documents?: DocumentSummary[];
 }
 
 export interface Activity {
@@ -210,6 +212,7 @@ export interface Organization {
 export interface Dashboard {
   contacts: { total: number; newThisMonth: number };
   companiesTotal: number;
+  setup: { orgConfigured: boolean; contacts: boolean; deals: boolean; products: boolean; quotes: boolean; team: boolean };
   pipeline: { openCount: number; value: number; weighted: number; winRate: number | null };
   stages: { stage: DealStage; count: number; amount: number }[];
   wonByMonth: { month: string; amount: number; collected: number; wonCount: number }[];

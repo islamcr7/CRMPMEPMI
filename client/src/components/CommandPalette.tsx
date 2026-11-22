@@ -7,6 +7,7 @@ import {
   CheckSquare,
   FilePlus,
   FileText,
+  History,
   KanbanSquare,
   LayoutDashboard,
   Loader2,
@@ -24,6 +25,7 @@ import { useAuth } from '../lib/auth';
 import type { ThemePref } from '../lib/theme';
 import { ActivityForm, CompanyForm, ContactForm, DealForm } from './forms';
 import { useSearchGroups } from './GlobalSearch';
+import { useRecent } from '../lib/recent';
 
 interface Command {
   key: string;
@@ -51,6 +53,7 @@ export function CommandPalette({ open, onClose, setTheme }: { open: boolean; onC
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const { groups: searchGroups, isFetching, enabled } = useSearchGroups(q);
+  const recent = useRecent();
 
   useEffect(() => {
     if (open) {
@@ -110,6 +113,12 @@ export function CommandPalette({ open, onClose, setTheme }: { open: boolean; onC
     const result: { title: string; items: Command[] }[] = [];
     const a = actions.filter(match);
     const p = pages.filter(match);
+    if (!nq && recent.length) {
+      result.push({
+        title: 'Récemment consultés',
+        items: recent.slice(0, 5).map((r) => ({ key: `r-${r.kind}-${r.id}`, icon: History, title: r.title, sub: r.sub, run: go(r.to) })),
+      });
+    }
     if (a.length) result.push({ title: 'Actions rapides', items: a });
     for (const g of searchGroups) {
       result.push({ title: g.title, items: g.items.map((i) => ({ key: i.key, icon: i.icon, title: i.title, sub: i.sub, run: go(i.to) })) });
@@ -117,7 +126,7 @@ export function CommandPalette({ open, onClose, setTheme }: { open: boolean; onC
     if (p.length) result.push({ title: nq ? 'Pages' : 'Aller à', items: p });
     return result;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, actions, pages, searchGroups]);
+  }, [q, actions, pages, searchGroups, recent]);
 
   const flat = sections.flatMap((s) => s.items);
   useEffect(() => setActive(0), [q, searchGroups.length]);
@@ -228,7 +237,7 @@ export function CommandPalette({ open, onClose, setTheme }: { open: boolean; onC
 
       {form === 'contact' && <ContactForm open onClose={() => setForm(null)} onSaved={(c) => navigate(`/contacts/${c.id}`)} />}
       {form === 'company' && <CompanyForm open onClose={() => setForm(null)} onSaved={(c) => navigate(`/companies/${c.id}`)} />}
-      {form === 'deal' && <DealForm open onClose={() => setForm(null)} />}
+      {form === 'deal' && <DealForm open onClose={() => setForm(null)} onSaved={(d) => navigate(`/deals/${d.id}`)} />}
       {form === 'activity' && <ActivityForm open onClose={() => setForm(null)} />}
     </>
   );

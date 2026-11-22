@@ -41,12 +41,19 @@ router.get('/', async (req, res) => {
         }
       : {}),
   };
+  // Tri : ?sort=name|city|industry|createdAt&dir=asc|desc
+  const dir = qs(req, 'dir') === 'desc' ? 'desc' : 'asc';
+  const sortKey = qs(req, 'sort');
+  const orderBy: Prisma.CompanyOrderByWithRelationInput =
+    sortKey === 'city' || sortKey === 'industry' || sortKey === 'createdAt'
+      ? { [sortKey]: { sort: dir, nulls: 'last' } }
+      : { name: dir };
   const [items, total] = await Promise.all([
     prisma.company.findMany({
       where,
       skip,
       take,
-      orderBy: { name: 'asc' },
+      orderBy: [orderBy, { name: 'asc' }],
       include: { owner, _count: { select: { contacts: true, deals: true } } },
     }),
     prisma.company.count({ where }),

@@ -17,6 +17,7 @@ import DocumentEditorPage from './pages/DocumentEditor';
 import DocumentViewPage from './pages/DocumentView';
 import UsersPage from './pages/Users';
 import CollectionsPage from './pages/Collections';
+import DealDetailPage from './pages/DealDetail';
 import ProductsPage from './pages/Products';
 import SettingsPage from './pages/Settings';
 
@@ -53,6 +54,7 @@ export default function App() {
         <Route path="documents/new/:type" element={<DocumentEditorPage />} />
         <Route path="documents/:id/edit" element={<DocumentEditorPage />} />
         <Route path="documents/:id" element={<DocumentViewPage />} />
+        <Route path="deals/:id" element={<DealDetailPage />} />
         <Route path="collections" element={<CollectionsPage />} />
         <Route path="products" element={<ProductsPage />} />
         <Route

@@ -4,14 +4,14 @@ import { CONTACT_STATUSES, DOC_STATUSES, DOC_TYPES, STAGES, label, tone } from '
 import type { Contact, Deal, DocumentSummary } from '../types';
 import { Badge, EmptyState } from './ui';
 
-export function DealRows({ deals, onEdit }: { deals: Deal[]; onEdit: (d: Deal) => void }) {
+export function DealRows({ deals }: { deals: Deal[] }) {
   const money = useMoney();
   if (!deals.length) return <EmptyState title="Aucune opportunité" />;
   return (
     <ul className="divide-y divide-slate-100">
       {deals.map((d) => (
         <li key={d.id}>
-          <button onClick={() => onEdit(d)} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-slate-50">
+          <Link to={`/deals/${d.id}`} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-slate-50">
             <div className="min-w-0">
               <div className="truncate text-sm font-medium text-slate-800">{d.title}</div>
               <div className="text-xs text-slate-500">
@@ -22,7 +22,7 @@ export function DealRows({ deals, onEdit }: { deals: Deal[]; onEdit: (d: Deal) =
               <span className="text-sm font-medium tabular-nums text-slate-700">{money(d.amount)}</span>
               <Badge tone={tone(STAGES, d.stage)}>{label(STAGES, d.stage)}</Badge>
             </div>
-          </button>
+          </Link>
         </li>
       ))}
     </ul>

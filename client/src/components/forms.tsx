@@ -152,9 +152,11 @@ export function DealForm({
   onClose,
   deal,
   defaults,
+  onSaved,
 }: {
   open: boolean;
   onClose: () => void;
+  onSaved?: (d: Deal) => void;
   deal?: Deal;
   defaults?: { stage?: DealStage; company?: { id: string; name: string }; contact?: { id: string; firstName: string; lastName: string } };
 }) {
@@ -180,7 +182,7 @@ export function DealForm({
     const { companyName: _c, contactName: _n, probability, amount, ...rest } = f;
     save.mutate(
       { ...rest, amount: amount === '' ? 0 : Number(amount), ...(probability === '' ? {} : { probability: Number(probability) }) },
-      { onSuccess: () => onClose() },
+      { onSuccess: (d) => (onSaved?.(d), onClose()) },
     );
   };
   return (

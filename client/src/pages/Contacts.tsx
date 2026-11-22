@@ -8,7 +8,7 @@ import { useAuth } from '../lib/auth';
 import { fullName } from '../lib/format';
 import { CONTACT_STATUSES, label, tone } from '../lib/labels';
 import type { Contact, Paginated } from '../types';
-import { Badge, Button, Card, EmptyState, ErrorBox, PageHeader, Pagination, SearchInput, Select, Spinner, useDebounce } from '../components/ui';
+import { Badge, Button, Card, EmptyState, ErrorBox, PageHeader, Pagination, SearchInput, Select, SortHeader, Spinner, useDebounce, type SortState } from '../components/ui';
 import { Owner } from '../components/OwnerCell';
 import { ContactForm } from '../components/forms';
 
@@ -21,11 +21,13 @@ export default function ContactsPage() {
   const [page, setPage] = useState(1);
   const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [sort, setSort] = useState<SortState>({ field: 'name', dir: 'asc' });
   const search = useDebounce(q);
+  const onSort = (s: SortState) => (setSort(s), setPage(1));
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['contacts', search, status, mine, page],
-    queryFn: () => api<Paginated<Contact>>(`/contacts${toQuery({ q: search, status, ownerId: mine && user?.id, page })}`),
+    queryKey: ['contacts', search, status, mine, page, sort],
+    queryFn: () => api<Paginated<Contact>>(`/contacts${toQuery({ q: search, status, ownerId: mine && user?.id, page, sort: sort.field, dir: sort.dir })}`),
     placeholderData: keepPreviousData,
   });
 
@@ -72,11 +74,11 @@ export default function ContactsPage() {
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
                 <tr>
-                  <th className="px-4 py-2.5">Nom</th>
-                  <th className="hidden px-4 py-2.5 sm:table-cell">Entreprise</th>
+                  <SortHeader label="Nom" field="name" sort={sort} onSort={onSort} />
+                  <SortHeader label="Entreprise" field="company" sort={sort} onSort={onSort} className="hidden sm:table-cell" />
                   <th className="hidden px-4 py-2.5 md:table-cell">Email</th>
                   <th className="hidden px-4 py-2.5 lg:table-cell">Téléphone</th>
-                  <th className="px-4 py-2.5">Statut</th>
+                  <SortHeader label="Statut" field="status" sort={sort} onSort={onSort} />
                   <th className="hidden px-4 py-2.5 md:table-cell">Responsable</th>
                 </tr>
               </thead>

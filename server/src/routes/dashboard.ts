@@ -103,6 +103,23 @@ router.get('/', async (req, res) => {
     if (m) m.collected += Number(p.amount);
   }
 
+  // Progression de la prise en main (guide « Premiers pas »)
+  const [org, productsCount, quotesCount, usersCount, dealsCount] = await Promise.all([
+    prisma.organization.findUnique({ where: { id: 'default' } }),
+    prisma.product.count(),
+    prisma.document.count({ where: { type: 'QUOTE' } }),
+    prisma.user.count({ where: { active: true } }),
+    prisma.deal.count(),
+  ]);
+  const setup = {
+    orgConfigured: !!org && org.name !== 'Mon entreprise' && !!org.address,
+    contacts: contactsTotal > 0,
+    deals: dealsCount > 0,
+    products: productsCount > 0,
+    quotes: quotesCount > 0,
+    team: usersCount > 1,
+  };
+
   const won = stages.find((s) => s.stage === 'WON')!;
   const lost = stages.find((s) => s.stage === 'LOST')!;
   const winRate = won.count + lost.count > 0 ? Math.round((won.count / (won.count + lost.count)) * 100) : null;
@@ -110,6 +127,7 @@ router.get('/', async (req, res) => {
   res.json({
     contacts: { total: contactsTotal, newThisMonth: contactsNew },
     companiesTotal,
+    setup,
     pipeline: { openCount: openDeals.length, value: pipelineValue, weighted: Math.round(weightedValue), winRate },
     stages,
     wonByMonth: months,

@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
   Building2,
   CheckSquare,
+  Clock,
   FileText,
   KanbanSquare,
   LayoutDashboard,
@@ -25,6 +26,10 @@ import { useSettings } from '../lib/format';
 import { useTheme, type ThemePref } from '../lib/theme';
 import { Avatar } from './ui';
 import { CommandPalette } from './CommandPalette';
+import { NewMenu } from './NewMenu';
+import { useRecent, type RecentItem } from '../lib/recent';
+
+const RECENT_ICONS: Record<RecentItem['kind'], typeof Users> = { company: Building2, contact: Users, deal: KanbanSquare, document: FileText };
 
 const NAV = [
   { to: '/', label: 'Tableau de bord', icon: LayoutDashboard, end: true },
@@ -78,6 +83,7 @@ export function Layout() {
   const [open, setOpen] = useState(false);
   const [palette, setPalette] = useState(false);
   const [theme, setTheme] = useTheme();
+  const recent = useRecent();
   const location = useLocation();
 
   // Ctrl+K / ⌘K ouvre la palette depuis n'importe quelle page
@@ -123,6 +129,22 @@ export function Layout() {
                 <Icon className="h-4 w-4" /> {label}
               </NavLink>
             ))}
+          </>
+        )}
+        {recent.length > 0 && (
+          <>
+            <div className="flex items-center gap-1.5 px-3 pb-1 pt-5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              <Clock className="h-3 w-3" /> Récents
+            </div>
+            {recent.slice(0, 5).map((r) => {
+              const Icon = RECENT_ICONS[r.kind];
+              return (
+                <NavLink key={`${r.kind}-${r.id}`} to={r.to} className={link} title={r.sub ? `${r.title} — ${r.sub}` : r.title}>
+                  <Icon className="h-4 w-4 shrink-0 text-slate-400" />
+                  <span className="truncate font-normal">{r.title}</span>
+                </NavLink>
+              );
+            })}
           </>
         )}
       </nav>
@@ -171,7 +193,8 @@ export function Layout() {
             <span className="truncate">Rechercher, créer, naviguer…</span>
             <kbd className="ml-auto hidden shrink-0 rounded border border-slate-200 bg-white px-1.5 py-0.5 font-sans text-xs text-slate-400 sm:inline">{isMac ? '⌘' : 'Ctrl'} K</kbd>
           </button>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
+            <NewMenu />
             <ThemeSwitch value={theme} onChange={setTheme} />
           </div>
         </header>

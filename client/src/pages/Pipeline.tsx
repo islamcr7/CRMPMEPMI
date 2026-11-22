@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Building2, Calendar, Plus, Trash2 } from 'lucide-react';
 import { api, toQuery } from '../lib/api';
@@ -29,7 +29,6 @@ export default function PipelinePage() {
   const [q, setQ] = useState('');
   const [mine, setMine] = useState(false);
   const [showClosed, setShowClosed] = useState(true);
-  const [editing, setEditing] = useState<Deal | null>(null);
   const [creatingIn, setCreatingIn] = useState<DealStage | null>(null);
   const [dragOver, setDragOver] = useState<DealStage | null>(null);
   const search = useDebounce(q);
@@ -40,16 +39,13 @@ export default function PipelinePage() {
     queryFn: () => api<Deal[]>(`/deals${toQuery({ q: search, ownerId: mine && user?.id })}`),
   });
 
-  // Ouverture directe d'une opportunité via /pipeline?deal=<id> (ex. depuis la recherche globale)
-  const [params, setParams] = useSearchParams();
+  // Anciens liens /pipeline?deal=<id> : redirection vers la fiche opportunité
+  const [params] = useSearchParams();
+  const navigate = useNavigate();
   const dealParam = params.get('deal');
   useEffect(() => {
-    if (!dealParam) return;
-    api<Deal>(`/deals/${dealParam}`)
-      .then(setEditing)
-      .catch(() => undefined)
-      .finally(() => setParams({}, { replace: true }));
-  }, [dealParam, setParams]);
+    if (dealParam) navigate(`/deals/${dealParam}`, { replace: true });
+  }, [dealParam, navigate]);
 
   const move = useMutation({
     mutationFn: ({ id, stage }: { id: string; stage: DealStage }) => api<Deal>(`/deals/${id}`, 'PATCH', { stage }),
@@ -151,7 +147,7 @@ export default function PipelinePage() {
                         key={d.id}
                         draggable
                         onDragStart={(e) => e.dataTransfer.setData('text/plain', d.id)}
-                        onClick={() => setEditing(d)}
+                        onClick={() => navigate(`/deals/${d.id}`)}
                         className="group cursor-pointer rounded-lg border border-slate-200 bg-white p-3 shadow-sm hover:border-indigo-300 active:cursor-grabbing"
                       >
                         <div className="flex items-start justify-between gap-2">
@@ -197,7 +193,6 @@ export default function PipelinePage() {
           </div>
         </div>
       )}
-      {editing && <DealForm open deal={editing} onClose={() => setEditing(null)} />}
       {creatingIn && <DealForm open defaults={{ stage: creatingIn }} onClose={() => setCreatingIn(null)} />}
     </>
   );

@@ -10,6 +10,7 @@ import type { Dashboard } from '../types';
 import { Card, ErrorBox, PageHeader, Skeleton } from '../components/ui';
 import { ActivityList } from '../components/ActivityList';
 import { GlobalSearch } from '../components/GlobalSearch';
+import { GettingStarted } from '../components/GettingStarted';
 import { GroupedBarChart, HorizontalBars, Legend, Segmented, ViewToggle, type Series } from '../components/charts';
 
 const MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
@@ -129,6 +130,7 @@ export default function DashboardPage() {
   return (
     <>
       {header}
+      <GettingStarted setup={data.setup} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Kpi label="Pipeline en cours" value={money(data.pipeline.value, true)} sub={`${data.pipeline.openCount} opportunités · pondéré ${money(data.pipeline.weighted, true)}`} icon={Target} to="/pipeline" />

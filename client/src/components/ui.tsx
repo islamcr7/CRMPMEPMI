@@ -1,5 +1,5 @@
 import { useEffect, useId, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
-import { ChevronLeft, ChevronRight, Inbox, Loader2, Search, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Inbox, Loader2, Search, X } from 'lucide-react';
 import type { Tone } from '../lib/labels';
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
@@ -185,6 +185,29 @@ export function Spinner({ className, rows = 5 }: { className?: string; rows?: nu
         </div>
       ))}
     </div>
+  );
+}
+
+/* ---------- En-tête de colonne triable ---------- */
+export interface SortState {
+  field: string;
+  dir: 'asc' | 'desc';
+}
+
+export function SortHeader({ label, field, sort, onSort, className }: { label: string; field: string; sort: SortState; onSort: (s: SortState) => void; className?: string }) {
+  const active = sort.field === field;
+  const Icon = active ? (sort.dir === 'asc' ? ArrowUp : ArrowDown) : ArrowUpDown;
+  return (
+    <th className={cx('px-4 py-2.5', className)} aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+      <button
+        type="button"
+        onClick={() => onSort({ field, dir: active && sort.dir === 'asc' ? 'desc' : 'asc' })}
+        className={cx('inline-flex items-center gap-1 uppercase tracking-wide hover:text-slate-800', active && 'text-slate-800')}
+      >
+        {label}
+        <Icon className={cx('h-3 w-3', !active && 'opacity-40')} />
+      </button>
+    </th>
   );
 }
 

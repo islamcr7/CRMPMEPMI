@@ -6,7 +6,7 @@ import { CsvImport, ExportButton } from '../components/CsvImport';
 import { api, toQuery } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import type { Company, Paginated } from '../types';
-import { Button, Card, EmptyState, ErrorBox, PageHeader, Pagination, SearchInput, Select, Spinner, useDebounce } from '../components/ui';
+import { Button, Card, EmptyState, ErrorBox, PageHeader, Pagination, SearchInput, Select, SortHeader, Spinner, useDebounce, type SortState } from '../components/ui';
 import { Owner } from '../components/OwnerCell';
 import { CompanyForm } from '../components/forms';
 
@@ -18,11 +18,13 @@ export default function CompaniesPage() {
   const [page, setPage] = useState(1);
   const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [sort, setSort] = useState<SortState>({ field: 'name', dir: 'asc' });
   const search = useDebounce(q);
+  const onSort = (s: SortState) => (setSort(s), setPage(1));
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['companies', search, mine, page],
-    queryFn: () => api<Paginated<Company>>(`/companies${toQuery({ q: search, ownerId: mine && user?.id, page })}`),
+    queryKey: ['companies', search, mine, page, sort],
+    queryFn: () => api<Paginated<Company>>(`/companies${toQuery({ q: search, ownerId: mine && user?.id, page, sort: sort.field, dir: sort.dir })}`),
     placeholderData: keepPreviousData,
   });
 
@@ -61,9 +63,9 @@ export default function CompaniesPage() {
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
                 <tr>
-                  <th className="px-4 py-2.5">Entreprise</th>
-                  <th className="hidden px-4 py-2.5 md:table-cell">Secteur</th>
-                  <th className="hidden px-4 py-2.5 sm:table-cell">Ville</th>
+                  <SortHeader label="Entreprise" field="name" sort={sort} onSort={onSort} />
+                  <SortHeader label="Secteur" field="industry" sort={sort} onSort={onSort} className="hidden md:table-cell" />
+                  <SortHeader label="Ville" field="city" sort={sort} onSort={onSort} className="hidden sm:table-cell" />
                   <th className="hidden px-4 py-2.5 lg:table-cell">Téléphone</th>
                   <th className="px-4 py-2.5 text-center">Contacts</th>
                   <th className="hidden px-4 py-2.5 text-center sm:table-cell">Opport.</th>
