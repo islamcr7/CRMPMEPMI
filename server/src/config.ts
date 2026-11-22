@@ -2,7 +2,8 @@ import 'dotenv/config';
 
 export const config = {
   // API_PORT (et non PORT) pour éviter les conflits avec les outils qui définissent PORT pour le frontend
-  port: Number(process.env.API_PORT ?? 4000),
+  // En hébergement (Render…), la plateforme impose PORT ; API_PORT reste prioritaire en local.
+  port: Number(process.env.API_PORT ?? process.env.PORT ?? 4000),
   jwtSecret: process.env.JWT_SECRET ?? '',
   isProd: process.env.NODE_ENV === 'production',
   tokenTtlDays: 7,

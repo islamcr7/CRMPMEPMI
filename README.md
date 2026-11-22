@@ -81,6 +81,21 @@ DATABASE_URL="postgresql://crm:crm@localhost:5433/crm_test?schema=public" API_PO
 bash scripts/smoke-test.sh http://localhost:4100/api
 ```
 
+## Démo en ligne gratuite (Render)
+
+Le fichier [`render.yaml`](render.yaml) décrit tout le déploiement : une application web et une base PostgreSQL, toutes deux sur l'offre gratuite.
+
+1. Poussez ce dépôt sur GitHub (un dépôt privé convient).
+2. Sur [render.com](https://render.com), connectez-vous avec GitHub, puis **New → Blueprint** et choisissez ce dépôt.
+3. Render demande `SEED_ADMIN_PASSWORD` et `SEED_SALES_PASSWORD` : choisissez les mots de passe des comptes de démo `admin@crm.local` et `commercial@crm.local`.
+4. **Apply**. Le premier déploiement prend 5 à 10 minutes : installation, build, migrations, données de démo. L'adresse publique ressemble à `https://crm-pme-xxxx.onrender.com`.
+
+Limites de l'offre gratuite :
+- **Mise en veille** : l'application s'endort après 15 minutes sans visite. La première visite suivante prend environ une minute, le temps qu'elle redémarre. Ouvrez-la juste avant votre démo.
+- **Base de données** : la base gratuite expire 30 jours après sa création. Render prévient par email ; il suffit de recréer la base depuis le Blueprint.
+
+Chaque `git push` sur la branche suivie redéploie automatiquement l'application.
+
 ## Mise en production
 
 1. Base PostgreSQL gérée, `DATABASE_URL` et un `JWT_SECRET` long et aléatoire, `NODE_ENV=production`.

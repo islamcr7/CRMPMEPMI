@@ -1,0 +1,34 @@
+# Déploiement Render (offre gratuite) : Dashboard → New → Blueprint → ce dépôt.
+# Un seul service web : l'API Express sert aussi l'interface React compilée.
+databases:
+  - name: crm-db
+    plan: free
+    databaseName: crm
+    user: crm
+
+services:
+  - type: web
+    name: crm-pme
+    runtime: node
+    plan: free
+    # --include=dev : TypeScript, Vite, Prisma CLI et tsx sont nécessaires au build et au seed
+    buildCommand: npm ci --include=dev && npm run build
+    # Migrations + données de démo (ignorées si des utilisateurs existent déjà), puis démarrage
+    startCommand: npm run start:prod
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: crm-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      # Comptes de démonstration : Render vous demande ces valeurs à la création
+      - key: SEED_ADMIN_EMAIL
+        value: admin@crm.local
+      - key: SEED_ADMIN_PASSWORD
+        sync: false
+      - key: SEED_SALES_PASSWORD
+        sync: false

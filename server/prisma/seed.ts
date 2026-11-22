@@ -11,6 +11,10 @@ async function main() {
   const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? 'Admin123!';
   const salesPassword = process.env.SEED_SALES_PASSWORD ?? 'Commercial123!';
 
+  if (process.env.NODE_ENV === 'production' && (!process.env.SEED_ADMIN_PASSWORD || !process.env.SEED_SALES_PASSWORD)) {
+    throw new Error('En production, définissez SEED_ADMIN_PASSWORD et SEED_SALES_PASSWORD (pas de mot de passe par défaut en ligne).');
+  }
+
   if ((await prisma.user.count()) > 0) {
     console.log('La base contient déjà des utilisateurs : seed ignoré.');
     return;
