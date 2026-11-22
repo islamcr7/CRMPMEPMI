@@ -1,52 +1,11 @@
 import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import {
-  Building2,
-  CheckSquare,
-  Clock,
-  FileText,
-  KanbanSquare,
-  LayoutDashboard,
-  LogOut,
-  Menu,
-  Monitor,
-  Moon,
-  Package,
-  Receipt,
-  Search,
-  Settings,
-  Sun,
-  UserCog,
-  Users,
-  Wallet,
-  X,
-} from 'lucide-react';
+import { Outlet, useLocation } from 'react-router-dom';
+import { Menu, Monitor, Moon, Search, Sun, X } from 'lucide-react';
 import { useAuth } from '../lib/auth';
-import { useSettings } from '../lib/format';
 import { useTheme, type ThemePref } from '../lib/theme';
-import { Avatar } from './ui';
 import { CommandPalette } from './CommandPalette';
 import { NewMenu } from './NewMenu';
-import { useRecent, type RecentItem } from '../lib/recent';
-
-const RECENT_ICONS: Record<RecentItem['kind'], typeof Users> = { company: Building2, contact: Users, deal: KanbanSquare, document: FileText };
-
-const NAV = [
-  { to: '/', label: 'Tableau de bord', icon: LayoutDashboard, end: true },
-  { to: '/companies', label: 'Entreprises', icon: Building2 },
-  { to: '/contacts', label: 'Contacts', icon: Users },
-  { to: '/pipeline', label: 'Pipeline', icon: KanbanSquare },
-  { to: '/activities', label: 'Activités', icon: CheckSquare },
-  { to: '/documents/quotes', label: 'Devis', icon: FileText },
-  { to: '/documents/invoices', label: 'Factures', icon: Receipt },
-  { to: '/collections', label: 'Recouvrement', icon: Wallet },
-  { to: '/products', label: 'Produits', icon: Package },
-];
-
-const ADMIN_NAV = [
-  { to: '/users', label: 'Utilisateurs', icon: UserCog },
-  { to: '/settings', label: 'Paramètres', icon: Settings },
-];
+import { Sidebar } from './Sidebar';
 
 const THEMES: { value: ThemePref; label: string; icon: typeof Sun }[] = [
   { value: 'light', label: 'Clair', icon: Sun },
@@ -78,12 +37,10 @@ function ThemeSwitch({ value, onChange }: { value: ThemePref; onChange: (t: Them
 }
 
 export function Layout() {
-  const { user, logout } = useAuth();
-  const { data: org } = useSettings();
+  const { logout } = useAuth();
   const [open, setOpen] = useState(false);
   const [palette, setPalette] = useState(false);
   const [theme, setTheme] = useTheme();
-  const recent = useRecent();
   const location = useLocation();
 
   // Ctrl+K / ⌘K ouvre la palette depuis n'importe quelle page
@@ -101,67 +58,7 @@ export function Layout() {
   // Fermer le menu mobile à chaque changement de page
   useEffect(() => setOpen(false), [location.pathname]);
 
-  const link = ({ isActive }: { isActive: boolean }) =>
-    `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-      isActive ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-    }`;
-
-  const sidebar = (
-    <div className="flex h-full flex-col">
-      <div className="flex items-center gap-2 px-4 py-5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-on-accent">C</div>
-        <div className="min-w-0">
-          <div className="text-sm font-semibold text-slate-900">CRM PME</div>
-          <div className="truncate text-xs text-slate-500">{org?.name}</div>
-        </div>
-      </div>
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3" aria-label="Navigation principale">
-        {NAV.map(({ to, label, icon: Icon, end }) => (
-          <NavLink key={to} to={to} end={end} className={link}>
-            <Icon className="h-4 w-4" /> {label}
-          </NavLink>
-        ))}
-        {user?.role === 'ADMIN' && (
-          <>
-            <div className="px-3 pb-1 pt-5 text-xs font-semibold uppercase tracking-wide text-slate-400">Administration</div>
-            {ADMIN_NAV.map(({ to, label, icon: Icon }) => (
-              <NavLink key={to} to={to} className={link}>
-                <Icon className="h-4 w-4" /> {label}
-              </NavLink>
-            ))}
-          </>
-        )}
-        {recent.length > 0 && (
-          <>
-            <div className="flex items-center gap-1.5 px-3 pb-1 pt-5 text-xs font-semibold uppercase tracking-wide text-slate-400">
-              <Clock className="h-3 w-3" /> Récents
-            </div>
-            {recent.slice(0, 5).map((r) => {
-              const Icon = RECENT_ICONS[r.kind];
-              return (
-                <NavLink key={`${r.kind}-${r.id}`} to={r.to} className={link} title={r.sub ? `${r.title} — ${r.sub}` : r.title}>
-                  <Icon className="h-4 w-4 shrink-0 text-slate-400" />
-                  <span className="truncate font-normal">{r.title}</span>
-                </NavLink>
-              );
-            })}
-          </>
-        )}
-      </nav>
-      <div className="border-t border-slate-200 p-3">
-        <div className="flex items-center gap-3 px-2 py-2">
-          {user && <Avatar name={user.name} />}
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-medium text-slate-800">{user?.name}</div>
-            <div className="truncate text-xs text-slate-500">{user?.role === 'ADMIN' ? 'Administrateur' : 'Commercial'}</div>
-          </div>
-          <button onClick={logout} className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="Se déconnecter" aria-label="Se déconnecter">
-            <LogOut className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+  const sidebar = <Sidebar onLogout={logout} />;
 
   return (
     <div className="flex h-full">

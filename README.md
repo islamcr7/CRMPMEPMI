@@ -64,6 +64,8 @@ scripts/           Test de fumée de l'API
 | Commande | Rôle |
 | --- | --- |
 | `npm run dev` | API + interface en mode développement |
+| `npm run deploy:local` | Compile puis lance la **version de production** en local sur http://localhost:8080 : un seul serveur, interface compilée, mode production (base Docker requise). Arrêtez d'abord `npm run dev` sous Windows |
+| `npm run serve:local` | Relance la version de production déjà compilée, sans recompiler (port modifiable : `PORT_LOCAL`) |
 | `npm run typecheck` | Vérification TypeScript client + serveur |
 | `npm run test:smoke` | 43 vérifications de bout en bout de l'API (serveur lancé, base seedée). **Crée des données** : à lancer de préférence sur une base de test (voir ci-dessous) |
 | `npm run db:studio -w server` | Explorer la base (Prisma Studio) |

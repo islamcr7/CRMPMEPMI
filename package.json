@@ -15,7 +15,9 @@
     "db:reset": "npm run db:reset -w server",
     "test:smoke": "bash scripts/smoke-test.sh",
     "start": "npm run start -w server",
-    "start:prod": "npm run db:deploy -w server && npm run db:seed -w server && npm run start -w server"
+    "start:prod": "npm run db:deploy -w server && npm run db:seed -w server && npm run start -w server",
+    "serve:local": "node scripts/serve-local.mjs",
+    "deploy:local": "npm run build && node scripts/serve-local.mjs"
   },
   "engines": {
     "node": ">=20"

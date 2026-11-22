@@ -20,6 +20,7 @@ import dashboardRoutes from './routes/dashboard.js';
 import searchRoutes from './routes/search.js';
 import productRoutes from './routes/products.js';
 import collectionRoutes from './routes/collections.js';
+import counterRoutes from './routes/counters.js';
 import { exportRouter, importRouter } from './routes/csv.js';
 
 const app = express();
@@ -45,6 +46,7 @@ app.use('/api/dashboard', requireAuth, dashboardRoutes);
 app.use('/api/search', requireAuth, searchRoutes);
 app.use('/api/products', requireAuth, productRoutes);
 app.use('/api/collections', requireAuth, collectionRoutes);
+app.use('/api/counters', requireAuth, counterRoutes);
 app.use('/api/export', requireAuth, exportRouter);
 app.use('/api/import', requireAuth, importRouter);
 
