@@ -11,7 +11,9 @@ router.get('/', async (req, res) => {
   today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today.getTime() + 86400000);
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+  // Période des graphiques : 6 ou 12 mois (paramètre ?months=)
+  const monthsCount = Number(req.query.months) === 12 ? 12 : 6;
+  const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - (monthsCount - 1), 1);
   const yearStart = new Date(now.getFullYear(), 0, 1);
   const userId = req.user!.id;
 
@@ -79,17 +81,26 @@ router.get('/', async (req, res) => {
   const pipelineValue = openDeals.reduce((s, d) => s + Number(d.amount), 0);
   const weightedValue = openDeals.reduce((s, d) => s + (Number(d.amount) * d.probability) / 100, 0);
 
-  const months: { month: string; amount: number }[] = [];
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    months.push({ month: key, amount: 0 });
+  // Séries mensuelles : opportunités gagnées (HT) et encaissements (TTC)
+  const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  const months: { month: string; amount: number; collected: number; wonCount: number }[] = [];
+  for (let i = monthsCount - 1; i >= 0; i--) {
+    months.push({ month: monthKey(new Date(now.getFullYear(), now.getMonth() - i, 1)), amount: 0, collected: 0, wonCount: 0 });
   }
   for (const d of wonRecent) {
-    if (!d.closedAt) continue;
-    const key = `${d.closedAt.getFullYear()}-${String(d.closedAt.getMonth() + 1).padStart(2, '0')}`;
-    const m = months.find((x) => x.month === key);
-    if (m) m.amount += Number(d.amount);
+    const m = d.closedAt && months.find((x) => x.month === monthKey(d.closedAt!));
+    if (m) {
+      m.amount += Number(d.amount);
+      m.wonCount++;
+    }
+  }
+  const payments = await prisma.payment.findMany({
+    where: { date: { gte: sixMonthsAgo }, document: { status: { not: 'CANCELLED' } } },
+    select: { amount: true, date: true },
+  });
+  for (const p of payments) {
+    const m = months.find((x) => x.month === monthKey(p.date));
+    if (m) m.collected += Number(p.amount);
   }
 
   const won = stages.find((s) => s.stage === 'WON')!;

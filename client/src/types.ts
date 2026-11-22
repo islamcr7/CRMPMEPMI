@@ -212,7 +212,7 @@ export interface Dashboard {
   companiesTotal: number;
   pipeline: { openCount: number; value: number; weighted: number; winRate: number | null };
   stages: { stage: DealStage; count: number; amount: number }[];
-  wonByMonth: { month: string; amount: number }[];
+  wonByMonth: { month: string; amount: number; collected: number; wonCount: number }[];
   wonThisMonth: number;
   activities: { overdue: number; myTasks: Activity[]; recent: Activity[] };
   invoices: { unpaidCount: number; unpaidTotal: number; overdueCount: number; overdueTotal: number; paidThisYear: number };

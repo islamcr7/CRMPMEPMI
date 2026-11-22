@@ -14,7 +14,7 @@ interface SearchResults {
   invoices: { id: string; number: string; total: Money; status: DocumentStatus; dueDate: string | null; company: { id: string; name: string } }[];
 }
 
-interface Item {
+export interface SearchItem {
   key: string;
   to: string;
   icon: typeof User;
@@ -22,16 +22,11 @@ interface Item {
   sub?: string;
   right?: ReactNode;
 }
+type Item = SearchItem;
 
-/** Recherche globale (contacts, opportunités, factures) avec navigation au clavier. */
-export function GlobalSearch() {
-  const navigate = useNavigate();
+/** Résultats groupés (contacts, opportunités, factures) – partagé par la barre de recherche et la palette Ctrl+K. */
+export function useSearchGroups(q: string) {
   const money = useMoney();
-  const [q, setQ] = useState('');
-  const [open, setOpen] = useState(false);
-  const [active, setActive] = useState(0);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const boxRef = useRef<HTMLDivElement>(null);
   const search = useDebounce(q.trim(), 250);
   const enabled = search.length >= 2;
 
@@ -82,7 +77,21 @@ export function GlobalSearch() {
         }),
       },
     ].filter((g) => g.items.length > 0);
-  }, [data, enabled, money]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, enabled]);
+
+  return { groups, isFetching, enabled, search };
+}
+
+/** Recherche globale (contacts, opportunités, factures) avec navigation au clavier. */
+export function GlobalSearch() {
+  const navigate = useNavigate();
+  const [q, setQ] = useState('');
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
+  const { groups, isFetching, enabled, search } = useSearchGroups(q);
 
   const flat = groups.flatMap((g) => g.items);
 

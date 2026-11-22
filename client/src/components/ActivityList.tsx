@@ -7,7 +7,8 @@ import { ACTIVITY_TYPES, label } from '../lib/labels';
 import { formatDate, fullName, isOverdue } from '../lib/format';
 import type { Activity, ActivityType } from '../types';
 import { ActivityForm } from './forms';
-import { EmptyState } from './ui';
+import { Avatar, EmptyState } from './ui';
+import { confirmDialog, toast } from './feedback';
 
 export const ACTIVITY_ICONS: Record<ActivityType, typeof Phone> = {
   CALL: Phone,
@@ -22,12 +23,19 @@ export function ActivityList({ items, showLinks = true, emptyText = 'Aucune acti
   const [editing, setEditing] = useState<Activity | null>(null);
   const toggle = useMutation({
     mutationFn: (a: Activity) => api(`/activities/${a.id}`, 'PATCH', { done: !a.done }),
-    onSuccess: () => qc.invalidateQueries(),
+    onSuccess: (_d, a) => {
+      qc.invalidateQueries();
+      if (!a.done) toast.success(`« ${a.subject} » terminé ✓`);
+    },
+    onError: (e) => toast.error(e.message),
   });
   const remove = useMutation({
     mutationFn: (a: Activity) => api(`/activities/${a.id}`, 'DELETE'),
-    onSuccess: () => qc.invalidateQueries(),
-    onError: (e) => alert(e.message),
+    onSuccess: () => {
+      qc.invalidateQueries();
+      toast.success('Activité supprimée');
+    },
+    onError: (e) => toast.error(e.message),
   });
 
   if (items.length === 0) return <EmptyState title={emptyText} />;
@@ -77,7 +85,11 @@ export function ActivityList({ items, showLinks = true, emptyText = 'Aucune acti
                     </Link>
                   )}
                   {showLinks && a.deal && <span>↳ {a.deal.title}</span>}
-                  {a.assignee && <span>· {a.assignee.name}</span>}
+                  {a.assignee && (
+                    <span className="inline-flex items-center gap-1">
+                      <Avatar name={a.assignee.name} size="xs" /> {a.assignee.name}
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="flex shrink-0 gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
@@ -85,7 +97,7 @@ export function ActivityList({ items, showLinks = true, emptyText = 'Aucune acti
                   <Pencil className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() => confirm('Supprimer cette activité ?') && remove.mutate(a)}
+                  onClick={async () => (await confirmDialog({ title: 'Supprimer cette activité ?', message: a.subject, confirmLabel: 'Supprimer', danger: true })) && remove.mutate(a)}
                   className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-600"
                   aria-label="Supprimer"
                 >

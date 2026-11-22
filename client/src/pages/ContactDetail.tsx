@@ -9,6 +9,7 @@ import type { Contact, Deal } from '../types';
 import { Badge, Button, Card, ErrorBox, InfoRow, PageHeader, Spinner } from '../components/ui';
 import { ActivityForm, ContactForm, DealForm } from '../components/forms';
 import { ActivityList } from '../components/ActivityList';
+import { confirmDialog, toast } from '../components/feedback';
 import { DealRows, DocumentRows } from '../components/RelatedLists';
 
 export default function ContactDetailPage() {
@@ -23,6 +24,7 @@ export default function ContactDetailPage() {
     mutationFn: () => api(`/contacts/${id}`, 'DELETE'),
     onSuccess: () => {
       qc.invalidateQueries();
+      toast.success('Contact supprimé');
       navigate('/contacts');
     },
   });
@@ -73,7 +75,8 @@ export default function ContactDetailPage() {
             <Button variant="secondary" onClick={() => setModal('edit')}>
               <Pencil className="h-4 w-4" /> Modifier
             </Button>
-            <Button variant="danger" onClick={() => confirm(`Supprimer ${fullName(c)} ?`) && remove.mutate()} loading={remove.isPending}>
+            <Button variant="danger" onClick={async () => (await confirmDialog({ title: `Supprimer ${fullName(c)} ?`, message: 'Ses activités seront également supprimées.', confirmLabel: 'Supprimer', danger: true })) && remove.mutate()}
+              aria-label="Supprimer le contact" loading={remove.isPending}>
               <Trash2 className="h-4 w-4" />
             </Button>
           </>

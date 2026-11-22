@@ -2,7 +2,8 @@ import type { ReactNode } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './lib/auth';
 import { Layout } from './components/Layout';
-import { Spinner } from './components/ui';
+import { FullPageSpinner } from './components/ui';
+import { FeedbackRoot } from './components/feedback';
 import LoginPage from './pages/Login';
 import DashboardPage from './pages/Dashboard';
 import CompaniesPage from './pages/Companies';
@@ -26,10 +27,18 @@ function AdminOnly({ children }: { children: ReactNode }) {
 
 export default function App() {
   const { user, loading } = useAuth();
-  if (loading) return <Spinner className="h-full" />;
-  if (!user) return <LoginPage />;
+  if (loading) return <FullPageSpinner />;
+  if (!user)
+    return (
+      <>
+        <LoginPage />
+        <FeedbackRoot />
+      </>
+    );
 
   return (
+    <>
+    <FeedbackRoot />
     <Routes>
       <Route element={<Layout />}>
         <Route index element={<DashboardPage />} />
@@ -65,5 +74,6 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
+    </>
   );
 }

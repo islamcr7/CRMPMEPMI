@@ -9,6 +9,7 @@ import type { Company, Deal, DocumentFull, DocumentType } from '../types';
 import { Button, Card, ErrorBox, Input, PageHeader, Spinner, Textarea } from '../components/ui';
 import { EntityPicker } from '../components/pickers';
 import { ProductPicker } from '../components/ProductPicker';
+import { toast } from '../components/feedback';
 
 interface LineState {
   key: number;
@@ -97,6 +98,7 @@ export default function DocumentEditorPage() {
     mutationFn: (body: unknown) => (isEdit ? api<DocumentFull>(`/documents/${id}`, 'PATCH', body) : api<DocumentFull>('/documents', 'POST', body)),
     onSuccess: (doc) => {
       qc.invalidateQueries();
+      toast.success('Brouillon enregistré');
       navigate(`/documents/${doc.id}`, { replace: true });
     },
   });
@@ -106,7 +108,7 @@ export default function DocumentEditorPage() {
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!company.id) {
-      alert('Veuillez choisir un client');
+      toast.error('Veuillez choisir un client');
       return;
     }
     save.mutate({

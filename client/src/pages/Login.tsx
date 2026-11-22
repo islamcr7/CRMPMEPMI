@@ -27,7 +27,7 @@ export default function LoginPage() {
     <div className="flex min-h-full items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-slate-100 px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600 text-xl font-bold text-white shadow-lg shadow-indigo-600/20">C</div>
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600 text-xl font-bold text-on-accent shadow-lg shadow-indigo-600/20">C</div>
           <h1 className="text-2xl font-semibold text-slate-900">CRM PME</h1>
           <p className="mt-1 text-sm text-slate-500">Connectez-vous à votre espace</p>
         </div>

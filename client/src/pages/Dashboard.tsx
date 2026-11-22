@@ -1,65 +1,147 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, Receipt, Target, TrendingUp, Trophy, Users } from 'lucide-react';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { AlertTriangle, CalendarCheck, History, Receipt, Target, Trophy, Users } from 'lucide-react';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
-import { useMoney } from '../lib/format';
+import { useMoney, useSettings } from '../lib/format';
 import { STAGES } from '../lib/labels';
 import type { Dashboard } from '../types';
-import { Card, ErrorBox, PageHeader, Spinner } from '../components/ui';
+import { Card, ErrorBox, PageHeader, Skeleton } from '../components/ui';
 import { ActivityList } from '../components/ActivityList';
 import { GlobalSearch } from '../components/GlobalSearch';
+import { GroupedBarChart, HorizontalBars, Legend, Segmented, ViewToggle, type Series } from '../components/charts';
+
+const MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+const MONTHS_LONG = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+const monthShort = (k: string) => MONTHS[Number(k.slice(5)) - 1];
+const monthLong = (k: string) => `${MONTHS_LONG[Number(k.slice(5)) - 1]} ${k.slice(0, 4)}`;
+
+const SERIES: Series[] = [
+  { key: 'amount', label: 'Affaires gagnées (HT)', color: 'var(--chart-1)' },
+  { key: 'collected', label: 'Encaissements (TTC)', color: 'var(--chart-2)' },
+];
+const FUNNEL_COLORS = ['var(--funnel-1)', 'var(--funnel-2)', 'var(--funnel-3)', 'var(--funnel-4)'];
 
 function Kpi({ label, value, sub, icon: Icon, to, alert }: { label: string; value: string; sub?: string; icon: typeof Users; to?: string; alert?: boolean }) {
   const body = (
-    <div className="flex items-start justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow">
+    <div className="group flex h-full items-start justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       <div className="min-w-0">
         <div className="text-xs font-medium text-slate-500">{label}</div>
-        <div className="mt-1 truncate text-xl font-semibold tabular-nums text-slate-900">{value}</div>
-        {sub && <div className={`mt-0.5 text-xs ${alert ? 'font-medium text-red-600' : 'text-slate-500'}`}>{sub}</div>}
+        <div className="mt-1 truncate text-2xl font-semibold tracking-tight text-slate-900">{value}</div>
+        {sub && (
+          <div className={`mt-1 flex items-center gap-1 text-xs ${alert ? 'font-medium text-red-600' : 'text-slate-500'}`}>
+            {alert && <AlertTriangle className="h-3 w-3 shrink-0" />}
+            <span className="truncate">{sub}</span>
+          </div>
+        )}
       </div>
       <div className={`rounded-lg p-2 ${alert ? 'bg-red-50 text-red-600' : 'bg-indigo-50 text-indigo-600'}`}>
         <Icon className="h-5 w-5" />
       </div>
     </div>
   );
-  return to ? <Link to={to}>{body}</Link> : body;
+  return to ? (
+    <Link to={to} className="block rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+      {body}
+    </Link>
+  ) : (
+    body
+  );
 }
 
-const MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+function DashboardSkeleton() {
+  return (
+    <div aria-busy="true" aria-label="Chargement du tableau de bord">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="rounded-xl border border-slate-200 bg-white p-4">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="mt-3 h-7 w-32" />
+            <Skeleton className="mt-2 h-2.5 w-40" />
+          </div>
+        ))}
+      </div>
+      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+        <div className="rounded-xl border border-slate-200 bg-white p-4 lg:col-span-2">
+          <Skeleton className="h-4 w-48" />
+          <div className="mt-6 flex h-48 items-end gap-4">
+            {[40, 65, 30, 80, 55, 70].map((h, i) => (
+              <div key={i} className="flex flex-1" style={{ height: `${h}%` }}>
+                <Skeleton className="flex-1" />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-4">
+          <Skeleton className="h-4 w-36" />
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-2.5 w-full" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const money = useMoney();
-  const { data, isLoading, error } = useQuery({ queryKey: ['dashboard'], queryFn: () => api<Dashboard>('/dashboard') });
+  const { data: settings } = useSettings();
+  const [months, setMonths] = useState<6 | 12>(6);
+  const [table, setTable] = useState(false);
+  const { data, isLoading, error, isFetching } = useQuery({
+    queryKey: ['dashboard', months],
+    queryFn: () => api<Dashboard>(`/dashboard?months=${months}`),
+    placeholderData: keepPreviousData,
+  });
 
-  if (isLoading) return <Spinner />;
-  if (error || !data) return <ErrorBox error={error} />;
+  const currency = settings?.currency ?? 'EUR';
+  const axisFmt = (v: number) => {
+    try {
+      return new Intl.NumberFormat('fr-FR', { style: 'currency', currency, notation: 'compact', maximumFractionDigits: 1 }).format(v);
+    } catch {
+      return String(v);
+    }
+  };
 
-  const maxMonth = Math.max(1, ...data.wonByMonth.map((m) => m.amount));
-  const openStages = data.stages.filter((s) => s.stage !== 'WON' && s.stage !== 'LOST');
-  const maxStage = Math.max(1, ...openStages.map((s) => s.amount));
-
-  return (
+  const header = (
     <>
       <PageHeader title={`Bonjour ${user?.name.split(' ')[0]} 👋`} subtitle="Vue d’ensemble de votre activité commerciale" />
-
       <div className="mb-6">
         <GlobalSearch />
       </div>
+    </>
+  );
+
+  if (isLoading) return (
+    <>
+      {header}
+      <DashboardSkeleton />
+    </>
+  );
+  if (error || !data) return <ErrorBox error={error} />;
+
+  const openStages = data.stages.filter((s) => s.stage !== 'WON' && s.stage !== 'LOST');
+  const totalWon = data.wonByMonth.reduce((s, m) => s + m.amount, 0);
+  const totalCollected = data.wonByMonth.reduce((s, m) => s + m.collected, 0);
+
+  return (
+    <>
+      {header}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Kpi label="Pipeline en cours" value={money(data.pipeline.value, true)} sub={`${data.pipeline.openCount} opportunités · pondéré ${money(data.pipeline.weighted, true)}`} icon={Target} to="/pipeline" />
         <Kpi
           label="Gagné ce mois"
           value={money(data.wonThisMonth, true)}
-          sub={data.pipeline.winRate !== null ? `Taux de transformation ${data.pipeline.winRate} %` : undefined}
+          sub={data.pipeline.winRate !== null ? `Taux de transformation ${data.pipeline.winRate} %` : 'Aucune affaire clôturée'}
           icon={Trophy}
         />
         <Kpi
           label="Factures à encaisser"
           value={money(data.invoices.unpaidTotal, true)}
-          sub={data.invoices.overdueCount > 0 ? `${data.invoices.overdueCount} en retard (${money(data.invoices.overdueTotal, true)})` : `${data.invoices.unpaidCount} facture(s) envoyée(s)`}
+          sub={data.invoices.overdueCount > 0 ? `${data.invoices.overdueCount} en retard (${money(data.invoices.overdueTotal, true)})` : `${data.invoices.unpaidCount} facture(s) émise(s)`}
           alert={data.invoices.overdueCount > 0}
           icon={Receipt}
           to="/collections"
@@ -67,7 +149,7 @@ export default function DashboardPage() {
         <Kpi
           label="Tâches en retard"
           value={String(data.activities.overdue)}
-          sub={`${data.contacts.total} contacts · +${data.contacts.newThisMonth} ce mois`}
+          sub={data.activities.overdue > 0 ? 'À traiter en priorité' : `${data.contacts.total} contacts · +${data.contacts.newThisMonth} ce mois`}
           alert={data.activities.overdue > 0}
           icon={data.activities.overdue > 0 ? AlertTriangle : Users}
           to="/activities"
@@ -75,53 +157,131 @@ export default function DashboardPage() {
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        <Card title="Mes tâches du jour et en retard" className="lg:col-span-2" actions={<Link to="/activities" className="text-xs font-medium text-indigo-600 hover:underline">Tout voir</Link>}>
+        <Card
+          className="lg:col-span-2"
+          title="Ventes et encaissements"
+          actions={
+            <>
+              <Segmented
+                label="Période"
+                value={months}
+                onChange={setMonths}
+                options={[
+                  { value: 6, label: '6 mois' },
+                  { value: 12, label: '12 mois' },
+                ]}
+              />
+              <ViewToggle table={table} onChange={setTable} />
+            </>
+          }
+        >
+          <div className={`px-4 pb-4 pt-3 transition-opacity ${isFetching ? 'opacity-60' : ''}`}>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <Legend series={SERIES} />
+              <p className="text-xs text-slate-500">
+                Sur la période : <span className="font-medium text-slate-800">{money(totalWon, true)}</span> gagnés ·{' '}
+                <span className="font-medium text-slate-800">{money(totalCollected, true)}</span> encaissés
+              </p>
+            </div>
+            {table ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <caption className="sr-only">Affaires gagnées et encaissements par mois</caption>
+                  <thead className="text-left text-xs text-slate-500">
+                    <tr className="border-b border-slate-200">
+                      <th className="py-2 font-medium">Mois</th>
+                      <th className="py-2 text-right font-medium">Affaires gagnées (HT)</th>
+                      <th className="py-2 text-right font-medium">Nb</th>
+                      <th className="py-2 text-right font-medium">Encaissements (TTC)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {data.wonByMonth.map((m) => (
+                      <tr key={m.month}>
+                        <td className="py-1.5 capitalize text-slate-700">{monthLong(m.month)}</td>
+                        <td className="py-1.5 text-right tabular-nums text-slate-800">{money(m.amount)}</td>
+                        <td className="py-1.5 text-right tabular-nums text-slate-500">{m.wonCount}</td>
+                        <td className="py-1.5 text-right tabular-nums text-slate-800">{money(m.collected)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <GroupedBarChart
+                data={data.wonByMonth}
+                series={SERIES}
+                category={(d) => monthShort(d.month)}
+                categoryLong={(d) => monthLong(d.month)}
+                value={(d, k) => (k === 'amount' ? d.amount : d.collected)}
+                format={(v) => money(v)}
+                formatAxis={axisFmt}
+                extra={(d) => `${d.wonCount} affaire(s) gagnée(s)`}
+                ariaLabel={`Affaires gagnées et encaissements sur ${months} mois`}
+              />
+            )}
+          </div>
+        </Card>
+
+        <Card title="Pipeline par étape" actions={<Link to="/pipeline" className="text-xs font-medium text-indigo-600 hover:underline">Ouvrir</Link>}>
+          <div className="p-4">
+            <HorizontalBars
+              format={(v) => money(v, true)}
+              rows={openStages.map((s, i) => ({
+                key: s.stage,
+                label: STAGES.find((x) => x.value === s.stage)?.label ?? s.stage,
+                value: s.amount,
+                color: FUNNEL_COLORS[i],
+                detail: `${s.count} opp.`,
+                tooltip: (
+                  <>
+                    <div className="font-semibold text-slate-800">{STAGES.find((x) => x.value === s.stage)?.label}</div>
+                    <div className="text-slate-500">
+                      {s.count} opportunité(s) · {money(s.amount)}
+                    </div>
+                    <div className="text-slate-500">Panier moyen : {money(s.count ? s.amount / s.count : 0)}</div>
+                  </>
+                ),
+              }))}
+            />
+            <dl className="mt-5 grid grid-cols-2 gap-3 border-t border-slate-100 pt-4 text-xs">
+              <div>
+                <dt className="text-slate-500">Valeur pondérée</dt>
+                <dd className="mt-0.5 text-base font-semibold text-slate-900">{money(data.pipeline.weighted, true)}</dd>
+              </div>
+              <div>
+                <dt className="text-slate-500">Encaissé cette année</dt>
+                <dd className="mt-0.5 text-base font-semibold text-slate-900">{money(data.invoices.paidThisYear, true)}</dd>
+              </div>
+            </dl>
+          </div>
+        </Card>
+
+        <Card
+          title={
+            <span className="inline-flex items-center gap-2">
+              <CalendarCheck className="h-4 w-4 text-slate-400" /> Mes tâches du jour et en retard
+            </span>
+          }
+          className="lg:col-span-2"
+          actions={
+            <Link to="/activities" className="text-xs font-medium text-indigo-600 hover:underline">
+              Tout voir
+            </Link>
+          }
+        >
           <ActivityList items={data.activities.myTasks} emptyText="Rien à faire aujourd’hui 🎉" />
         </Card>
 
-        <Card title="Pipeline par étape">
-          <div className="space-y-3 p-4">
-            {openStages.map((s) => (
-              <div key={s.stage}>
-                <div className="mb-1 flex justify-between text-xs">
-                  <span className="font-medium text-slate-700">
-                    {STAGES.find((x) => x.value === s.stage)?.label} <span className="text-slate-400">({s.count})</span>
-                  </span>
-                  <span className="tabular-nums text-slate-600">{money(s.amount, true)}</span>
-                </div>
-                <div className="h-2 rounded-full bg-slate-100">
-                  <div className="h-2 rounded-full bg-indigo-500" style={{ width: `${(s.amount / maxStage) * 100}%` }} />
-                </div>
-              </div>
-            ))}
-            <p className="pt-2 text-xs text-slate-500">
-              CA encaissé cette année : <span className="font-medium text-slate-700">{money(data.invoices.paidThisYear)}</span>
-            </p>
-          </div>
-        </Card>
-
-        <Card title="Affaires gagnées (6 derniers mois)" className="lg:col-span-2">
-          <div className="flex h-48 items-end gap-3 px-4 pb-4 pt-6">
-            {data.wonByMonth.map((m) => {
-              const month = MONTHS[Number(m.month.slice(5)) - 1];
-              return (
-                <div key={m.month} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
-                  <span className="text-[11px] tabular-nums text-slate-500">{m.amount > 0 ? money(m.amount, true) : ''}</span>
-                  <div className="w-full max-w-12 rounded-t-md bg-emerald-500/80" style={{ height: `${Math.max(2, (m.amount / maxMonth) * 100)}%` }} title={money(m.amount)} />
-                  <span className="text-xs text-slate-500">{month}</span>
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-
-        <Card title="Activité récente">
+        <Card
+          title={
+            <span className="inline-flex items-center gap-2">
+              <History className="h-4 w-4 text-slate-400" /> Activité récente
+            </span>
+          }
+        >
           <ActivityList items={data.activities.recent} emptyText="Aucune activité terminée" />
         </Card>
-      </div>
-
-      <div className="mt-6 flex items-center gap-2 text-xs text-slate-400">
-        <TrendingUp className="h-3.5 w-3.5" /> {data.companiesTotal} entreprises suivies
       </div>
     </>
   );

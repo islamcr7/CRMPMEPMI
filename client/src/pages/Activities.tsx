@@ -50,7 +50,7 @@ export default function ActivitiesPage() {
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}
-                className={`rounded-lg px-3 py-1.5 text-sm font-medium ${tab === t.key ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium ${tab === t.key ? 'bg-indigo-600 text-on-accent' : 'text-slate-600 hover:bg-slate-100'}`}
               >
                 {t.label}
               </button>

@@ -7,6 +7,7 @@ import { formatDate } from '../lib/format';
 import type { Role, User } from '../types';
 import { Badge, Button, Card, ErrorBox, FormActions, Input, Modal, PageHeader, Select, Spinner } from '../components/ui';
 import { useUsers } from '../components/pickers';
+import { toast } from '../components/feedback';
 
 function UserForm({ user, onClose }: { user?: User; onClose: () => void }) {
   const qc = useQueryClient();
@@ -60,8 +61,11 @@ export default function UsersPage() {
   const [editing, setEditing] = useState<User | 'new' | null>(null);
   const toggle = useMutation({
     mutationFn: (u: User) => api(`/users/${u.id}`, 'PATCH', { active: !u.active }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
-    onError: (e) => alert(e.message),
+    onSuccess: (_d, u) => {
+      qc.invalidateQueries({ queryKey: ['users'] });
+      toast.success(u.active ? `${u.name} est désactivé(e)` : `${u.name} est réactivé(e)`);
+    },
+    onError: (e) => toast.error(e.message),
   });
 
   return (

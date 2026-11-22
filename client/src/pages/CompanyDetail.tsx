@@ -7,6 +7,7 @@ import type { Company, Deal } from '../types';
 import { Button, Card, ErrorBox, InfoRow, PageHeader, Spinner } from '../components/ui';
 import { ActivityForm, CompanyForm, ContactForm, DealForm } from '../components/forms';
 import { ActivityList } from '../components/ActivityList';
+import { confirmDialog, toast } from '../components/feedback';
 import { ContactRows, DealRows, DocumentRows } from '../components/RelatedLists';
 
 export default function CompanyDetailPage() {
@@ -21,6 +22,7 @@ export default function CompanyDetailPage() {
     mutationFn: () => api(`/companies/${id}`, 'DELETE'),
     onSuccess: () => {
       qc.invalidateQueries();
+      toast.success('Entreprise supprimée');
       navigate('/companies');
     },
   });
@@ -47,7 +49,11 @@ export default function CompanyDetailPage() {
                 <FilePlus className="h-4 w-4" /> Devis
               </Button>
             </Link>
-            <Button variant="danger" onClick={() => confirm(`Supprimer « ${c.name} » ? Les activités liées seront supprimées.`) && remove.mutate()} loading={remove.isPending}>
+            <Button variant="danger" onClick={async () =>
+                (await confirmDialog({ title: `Supprimer « ${c.name} » ?`, message: 'Les activités liées seront supprimées. Les contacts et opportunités sont conservés, sans entreprise.', confirmLabel: 'Supprimer', danger: true })) &&
+                remove.mutate()
+              }
+              aria-label="Supprimer l’entreprise" loading={remove.isPending}>
               <Trash2 className="h-4 w-4" />
             </Button>
           </>

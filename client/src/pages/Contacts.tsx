@@ -9,6 +9,7 @@ import { fullName } from '../lib/format';
 import { CONTACT_STATUSES, label, tone } from '../lib/labels';
 import type { Contact, Paginated } from '../types';
 import { Badge, Button, Card, EmptyState, ErrorBox, PageHeader, Pagination, SearchInput, Select, Spinner, useDebounce } from '../components/ui';
+import { Owner } from '../components/OwnerCell';
 import { ContactForm } from '../components/forms';
 
 export default function ContactsPage() {
@@ -94,7 +95,7 @@ export default function ContactsPage() {
                     <td className="px-4 py-3">
                       <Badge tone={tone(CONTACT_STATUSES, c.status)}>{label(CONTACT_STATUSES, c.status)}</Badge>
                     </td>
-                    <td className="hidden px-4 py-3 text-slate-600 md:table-cell">{c.owner?.name ?? '—'}</td>
+                    <td className="hidden px-4 py-3 text-slate-600 md:table-cell"><Owner owner={c.owner} /></td>
                   </tr>
                 ))}
               </tbody>

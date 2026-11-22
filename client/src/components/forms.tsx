@@ -8,13 +8,17 @@ import { fromDateTimeInput, fullName, toDateInput, toDateTimeInput } from '../li
 import type { Activity, ActivityType, Company, Contact, ContactStatus, Deal, DealStage } from '../types';
 import { ErrorBox, FormActions, Input, Modal, Select, Textarea } from './ui';
 import { EntityPicker, UserSelect } from './pickers';
+import { toast } from './feedback';
 
 /** Mutation qui rafraîchit toutes les données après succès (simple et toujours cohérent). */
 function useSave<T>(path: string, id?: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: unknown) => api<T>(id ? `${path}/${id}` : path, id ? 'PATCH' : 'POST', body),
-    onSuccess: () => qc.invalidateQueries(),
+    onSuccess: () => {
+      qc.invalidateQueries();
+      toast.success(id ? 'Modifications enregistrées' : 'Créé avec succès');
+    },
   });
 }
 

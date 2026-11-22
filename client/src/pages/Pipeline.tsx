@@ -8,8 +8,10 @@ import { formatDate, fullName, isOverdue, useMoney } from '../lib/format';
 import { STAGES } from '../lib/labels';
 import type { Deal, DealStage } from '../types';
 import { Button, ErrorBox, PageHeader, SearchInput, Select, Spinner, useDebounce } from '../components/ui';
+import { Owner } from '../components/OwnerCell';
 import { DealForm } from '../components/forms';
 import { ExportButton } from '../components/CsvImport';
+import { confirmDialog, toast } from '../components/feedback';
 
 const COLUMN_ACCENT: Record<DealStage, string> = {
   NEW: 'border-t-slate-400',
@@ -59,15 +61,21 @@ export default function PipelinePage() {
     },
     onError: (e, _v, ctx) => {
       if (ctx?.prev) qc.setQueryData(key, ctx.prev);
-      alert(e.message);
+      toast.error(e.message);
+    },
+    onSuccess: (d) => {
+      if (d.stage === 'WON') toast.success(`🎉 « ${d.title} » gagnée !`);
     },
     onSettled: () => qc.invalidateQueries(),
   });
 
   const remove = useMutation({
     mutationFn: (id: string) => api(`/deals/${id}`, 'DELETE'),
-    onSuccess: () => qc.invalidateQueries(),
-    onError: (e) => alert(e.message),
+    onSuccess: () => {
+      qc.invalidateQueries();
+      toast.success('Opportunité supprimée');
+    },
+    onError: (e) => toast.error(e.message),
   });
 
   const columns = STAGES.filter((s) => showClosed || (s.value !== 'WON' && s.value !== 'LOST'));
@@ -149,9 +157,10 @@ export default function PipelinePage() {
                         <div className="flex items-start justify-between gap-2">
                           <div className="text-sm font-medium text-slate-800">{d.title}</div>
                           <button
-                            onClick={(e) => {
+                            onClick={async (e) => {
                               e.stopPropagation();
-                              if (confirm(`Supprimer « ${d.title} » ?`)) remove.mutate(d.id);
+                              if (await confirmDialog({ title: `Supprimer « ${d.title} » ?`, message: 'Ses activités seront également supprimées.', confirmLabel: 'Supprimer', danger: true }))
+                                remove.mutate(d.id);
                             }}
                             className="shrink-0 text-slate-300 opacity-0 hover:text-red-600 group-hover:opacity-100"
                             aria-label="Supprimer"
@@ -177,7 +186,7 @@ export default function PipelinePage() {
                           ) : (
                             <span />
                           )}
-                          {d.owner && <span>{d.owner.name}</span>}
+                          <Owner owner={d.owner} compact />
                         </div>
                       </div>
                     ))}

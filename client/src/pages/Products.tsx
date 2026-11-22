@@ -7,6 +7,7 @@ import { useMoney, useSettings } from '../lib/format';
 import type { Product } from '../types';
 import { Badge, Button, Card, EmptyState, ErrorBox, FormActions, Input, Modal, PageHeader, SearchInput, Select, Spinner, Textarea, useDebounce } from '../components/ui';
 import { CsvImport, ExportButton } from '../components/CsvImport';
+import { confirmDialog, toast } from '../components/feedback';
 
 function ProductForm({ product, onClose }: { product?: Product; onClose: () => void }) {
   const qc = useQueryClient();
@@ -28,6 +29,7 @@ function ProductForm({ product, onClose }: { product?: Product; onClose: () => v
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['products'] });
+      toast.success(product ? 'Produit mis à jour' : 'Produit ajouté au catalogue');
       onClose();
     },
   });
@@ -74,8 +76,11 @@ export default function ProductsPage() {
   });
   const remove = useMutation({
     mutationFn: (id: string) => api(`/products/${id}`, 'DELETE'),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['products'] }),
-    onError: (e) => alert(e.message),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['products'] });
+      toast.success('Produit supprimé');
+    },
+    onError: (e) => toast.error(e.message),
   });
 
   return (
@@ -142,7 +147,10 @@ export default function ProductsPage() {
                       </button>
                       {user?.role === 'ADMIN' && (
                         <button
-                          onClick={() => confirm(`Supprimer « ${p.name} » ? Les devis et factures existants ne sont pas modifiés.`) && remove.mutate(p.id)}
+                          onClick={async () =>
+                            (await confirmDialog({ title: `Supprimer « ${p.name} » ?`, message: 'Les devis et factures existants ne sont pas modifiés. Pour le masquer sans le supprimer, archivez-le.', confirmLabel: 'Supprimer', danger: true })) &&
+                            remove.mutate(p.id)
+                          }
                           className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-600"
                           aria-label="Supprimer"
                         >

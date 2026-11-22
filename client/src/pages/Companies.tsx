@@ -7,6 +7,7 @@ import { api, toQuery } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import type { Company, Paginated } from '../types';
 import { Button, Card, EmptyState, ErrorBox, PageHeader, Pagination, SearchInput, Select, Spinner, useDebounce } from '../components/ui';
+import { Owner } from '../components/OwnerCell';
 import { CompanyForm } from '../components/forms';
 
 export default function CompaniesPage() {
@@ -83,7 +84,7 @@ export default function CompaniesPage() {
                     <td className="hidden px-4 py-3 text-slate-600 lg:table-cell">{c.phone ?? '—'}</td>
                     <td className="px-4 py-3 text-center tabular-nums text-slate-600">{c._count?.contacts ?? 0}</td>
                     <td className="hidden px-4 py-3 text-center tabular-nums text-slate-600 sm:table-cell">{c._count?.deals ?? 0}</td>
-                    <td className="hidden px-4 py-3 text-slate-600 md:table-cell">{c.owner?.name ?? '—'}</td>
+                    <td className="hidden px-4 py-3 text-slate-600 md:table-cell"><Owner owner={c.owner} /></td>
                   </tr>
                 ))}
               </tbody>

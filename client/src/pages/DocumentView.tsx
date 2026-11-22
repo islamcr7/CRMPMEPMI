@@ -8,6 +8,7 @@ import { DOC_STATUSES, DOC_TYPES, PAYMENT_METHODS, label } from '../lib/labels';
 import type { DocumentFull, DocumentStatus, PaymentMethod } from '../types';
 import { Badge, Button, Card, ErrorBox, FormActions, Input, Modal, Select, Spinner } from '../components/ui';
 import { useAuth } from '../lib/auth';
+import { confirmDialog, toast } from '../components/feedback';
 
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
@@ -20,8 +21,9 @@ function PaymentModal({ doc, remaining, onClose }: { doc: DocumentFull; remainin
   const [reference, setReference] = useState('');
   const save = useMutation({
     mutationFn: () => api<DocumentFull>(`/documents/${doc.id}/payments`, 'POST', { amount: Number(amount), date, method, reference }),
-    onSuccess: () => {
+    onSuccess: (d) => {
       qc.invalidateQueries();
+      toast.success(d.status === 'PAID' ? `Paiement enregistré : facture ${d.number} soldée` : `Paiement de ${money(Number(amount))} enregistré`);
       onClose();
     },
   });
@@ -66,7 +68,14 @@ export default function DocumentViewPage() {
   const { data: doc, isLoading, error } = useQuery({ queryKey: ['document', id], queryFn: () => api<DocumentFull>(`/documents/${id}`) });
 
   const onDone = () => qc.invalidateQueries();
-  const setStatus = useMutation({ mutationFn: (status: DocumentStatus) => api<DocumentFull>(`/documents/${id}`, 'PATCH', { status }), onSuccess: onDone });
+  const STATUS_TOAST: Partial<Record<DocumentStatus, string>> = { SENT: 'Document émis', PAID: 'Facture soldée', REFUSED: 'Devis marqué refusé', CANCELLED: 'Devis annulé' };
+  const setStatus = useMutation({
+    mutationFn: (status: DocumentStatus) => api<DocumentFull>(`/documents/${id}`, 'PATCH', { status }),
+    onSuccess: (d, status) => {
+      onDone();
+      if (STATUS_TOAST[status]) toast.success(status === 'SENT' && d.type === 'INVOICE' ? `Facture ${d.number} émise` : STATUS_TOAST[status]!);
+    },
+  });
   const convert = useMutation({
     mutationFn: () => api<DocumentFull>(`/documents/${id}/convert`, 'POST'),
     onSuccess: (inv) => {
@@ -117,7 +126,8 @@ export default function DocumentViewPage() {
     return acc;
   }, {});
   const busy = setStatus.isPending || convert.isPending || remove.isPending || creditNote.isPending || remind.isPending;
-  const confirmStatus = (s: DocumentStatus, msg: string) => confirm(msg) && setStatus.mutate(s);
+  const confirmStatus = async (s: DocumentStatus, title: string, message?: string, danger = false) =>
+    (await confirmDialog({ title, message, danger, confirmLabel: danger ? 'Confirmer l’annulation' : 'Confirmer' })) && setStatus.mutate(s);
   const statusBadge = isCredit ? (
     <Badge tone="violet">Émis</Badge>
   ) : isInvoice && doc.status === 'SENT' && paid > 0 ? (
@@ -155,7 +165,9 @@ export default function DocumentViewPage() {
                 </Link>
                 <Button
                   onClick={() =>
-                    confirmStatus('SENT', isInvoice ? 'Émettre la facture ? Un numéro définitif sera attribué et elle ne sera plus modifiable.' : 'Marquer le devis comme envoyé ? Il ne sera plus modifiable.')
+                    isInvoice
+                      ? confirmStatus('SENT', 'Émettre la facture ?', 'Un numéro définitif et séquentiel sera attribué. La facture ne sera plus modifiable.')
+                      : confirmStatus('SENT', 'Marquer le devis comme envoyé ?', 'Il ne sera plus modifiable.')
                   }
                   loading={setStatus.isPending}
                 >
@@ -164,7 +176,13 @@ export default function DocumentViewPage() {
               </>
             )}
             {doc.type === 'QUOTE' && (doc.status === 'SENT' || doc.status === 'ACCEPTED') && !hasInvoice && (
-              <Button onClick={() => confirm('Créer une facture à partir de ce devis ? Le devis sera marqué accepté et l’opportunité liée gagnée.') && convert.mutate()} loading={convert.isPending}>
+              <Button
+                onClick={async () =>
+                  (await confirmDialog({ title: 'Transformer en facture ?', message: 'Une facture brouillon est créée avec les mêmes lignes. Le devis passe « accepté » et l’opportunité liée « gagnée ».', confirmLabel: 'Créer la facture' })) &&
+                  convert.mutate()
+                }
+                loading={convert.isPending}
+              >
                 <FileOutput className="h-4 w-4" /> Transformer en facture
               </Button>
             )}
@@ -178,7 +196,7 @@ export default function DocumentViewPage() {
                 <Button onClick={() => setPaying(true)} disabled={busy}>
                   <Wallet className="h-4 w-4" /> Enregistrer un paiement
                 </Button>
-                <Button variant="secondary" onClick={() => confirmStatus('PAID', `Marquer la facture comme entièrement payée ? Un paiement de ${money(remaining)} sera enregistré.`)} disabled={busy}>
+                <Button variant="secondary" onClick={() => confirmStatus('PAID', 'Marquer la facture comme soldée ?', `Un paiement de ${money(remaining)} (reste dû) sera enregistré à la date du jour.`)} disabled={busy}>
                   <CheckCircle2 className="h-4 w-4" /> Soldée
                 </Button>
                 <Button variant="secondary" onClick={() => remind.mutate()} loading={remind.isPending} disabled={busy}>
@@ -192,10 +210,13 @@ export default function DocumentViewPage() {
             {isInvoice && (doc.status === 'SENT' || doc.status === 'PAID') && !hasCredit && (
               <Button
                 variant="danger"
-                onClick={() =>
-                  confirm(
-                    `Annuler la facture ${doc.number} par un avoir de ${money(doc.total)} ? L’avoir est émis immédiatement et la facture passe « annulée ».${paid > 0 ? `\n\nAttention : ${money(paid)} déjà encaissé devra être remboursé au client.` : ''}`,
-                  ) && creditNote.mutate()
+                onClick={async () =>
+                  (await confirmDialog({
+                    title: `Annuler ${doc.number} par un avoir ?`,
+                    message: `Un avoir de ${money(doc.total)} est émis immédiatement et la facture passe « annulée ». Cette opération est définitive.${paid > 0 ? `\n\nAttention : ${money(paid)} déjà encaissé devra être remboursé au client.` : ''}`,
+                    confirmLabel: 'Émettre l’avoir',
+                    danger: true,
+                  })) && creditNote.mutate()
                 }
                 disabled={busy}
               >
@@ -203,13 +224,18 @@ export default function DocumentViewPage() {
               </Button>
             )}
             {doc.status === 'DRAFT' ? (
-              <Button variant="danger" onClick={() => confirm('Supprimer ce brouillon ?') && remove.mutate()} disabled={busy} aria-label="Supprimer le brouillon">
+              <Button
+                variant="danger"
+                onClick={async () => (await confirmDialog({ title: 'Supprimer ce brouillon ?', confirmLabel: 'Supprimer', danger: true })) && remove.mutate()}
+                disabled={busy}
+                aria-label="Supprimer le brouillon"
+              >
                 <Trash2 className="h-4 w-4" />
               </Button>
             ) : (
               doc.type === 'QUOTE' &&
               doc.status !== 'CANCELLED' && (
-                <Button variant="danger" onClick={() => confirmStatus('CANCELLED', 'Annuler ce devis ? Cette action est définitive.')} disabled={busy}>
+                <Button variant="danger" onClick={() => confirmStatus('CANCELLED', 'Annuler ce devis ?', 'Cette action est définitive.', true)} disabled={busy}>
                   Annuler le devis
                 </Button>
               )
@@ -273,7 +299,10 @@ export default function DocumentViewPage() {
                     </div>
                     {doc.status !== 'CANCELLED' && (user?.role === 'ADMIN' || p.createdById === user?.id) && (
                       <button
-                        onClick={() => confirm(`Supprimer ce paiement de ${money(p.amount)} ?`) && deletePayment.mutate(p.id)}
+                        onClick={async () =>
+                          (await confirmDialog({ title: `Supprimer ce paiement de ${money(p.amount)} ?`, message: 'Le reste à payer de la facture sera recalculé.', confirmLabel: 'Supprimer', danger: true })) &&
+                          deletePayment.mutate(p.id)
+                        }
                         className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-600"
                         aria-label="Supprimer le paiement"
                       >
