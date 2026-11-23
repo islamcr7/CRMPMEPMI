@@ -62,7 +62,7 @@ export default function DocumentViewPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const money = useMoney();
-  const { user } = useAuth();
+  const { can } = useAuth();
   const { data: org } = useSettings();
   const [paying, setPaying] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -113,6 +113,8 @@ export default function DocumentViewPage() {
 
   const docType = DOC_TYPES[doc.type];
   const isInvoice = doc.type === 'INVOICE';
+  // Module de droits du document (un avoir relève des factures)
+  const mod = doc.type === 'QUOTE' ? 'quotes' : 'invoices';
   const isCredit = doc.type === 'CREDIT_NOTE';
   const paid = Number(doc.amountPaid);
   const remaining = round2(Number(doc.total) - paid);
@@ -157,7 +159,7 @@ export default function DocumentViewPage() {
             )}
           </div>
           <div className="flex flex-wrap gap-2">
-            {doc.status === 'DRAFT' && (
+            {doc.status === 'DRAFT' && can(`${mod}.edit`) && (
               <>
                 <Link to={`/documents/${doc.id}/edit`}>
                   <Button variant="secondary">
@@ -176,7 +178,7 @@ export default function DocumentViewPage() {
                 </Button>
               </>
             )}
-            {doc.type === 'QUOTE' && (doc.status === 'SENT' || doc.status === 'ACCEPTED') && !hasInvoice && (
+            {doc.type === 'QUOTE' && (doc.status === 'SENT' || doc.status === 'ACCEPTED') && !hasInvoice && can('quotes.edit') && can('invoices.create') && (
               <Button
                 onClick={async () =>
                   (await confirmDialog({ title: t('Transformer en facture ?'), message: t('Une facture brouillon est créée avec les mêmes lignes. Le devis passe « accepté » et l’opportunité liée « gagnée ».'), confirmLabel: t('Créer la facture') })) &&
@@ -187,12 +189,12 @@ export default function DocumentViewPage() {
                 <FileOutput className="h-4 w-4" /> {t("Transformer en facture")}
               </Button>
             )}
-            {doc.type === 'QUOTE' && doc.status === 'SENT' && (
+            {doc.type === 'QUOTE' && doc.status === 'SENT' && can('quotes.edit') && (
               <Button variant="secondary" onClick={() => setStatus.mutate('REFUSED')} disabled={busy}>
                 <XCircle className="h-4 w-4" /> {t("Refusé")}
               </Button>
             )}
-            {isInvoice && doc.status === 'SENT' && (
+            {isInvoice && doc.status === 'SENT' && can('invoices.payments') && (
               <>
                 <Button onClick={() => setPaying(true)} disabled={busy}>
                   <Wallet className="h-4 w-4" /> {t("Enregistrer un paiement")}
@@ -208,7 +210,7 @@ export default function DocumentViewPage() {
             <Button variant="secondary" onClick={() => window.print()}>
               <Printer className="h-4 w-4" /> {t("Imprimer / PDF")}
             </Button>
-            {isInvoice && (doc.status === 'SENT' || doc.status === 'PAID') && !hasCredit && (
+            {isInvoice && (doc.status === 'SENT' || doc.status === 'PAID') && !hasCredit && can('invoices.credit') && (
               <Button
                 variant="danger"
                 onClick={async () =>
@@ -227,6 +229,7 @@ export default function DocumentViewPage() {
               </Button>
             )}
             {doc.status === 'DRAFT' ? (
+              can(`${mod}.delete`) && (
               <Button
                 variant="danger"
                 onClick={async () => (await confirmDialog({ title: t('Supprimer ce brouillon ?'), confirmLabel: t('Supprimer'), danger: true })) && remove.mutate()}
@@ -235,9 +238,11 @@ export default function DocumentViewPage() {
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
+              )
             ) : (
               doc.type === 'QUOTE' &&
-              doc.status !== 'CANCELLED' && (
+              doc.status !== 'CANCELLED' &&
+              can('quotes.edit') && (
                 <Button variant="danger" onClick={() => confirmStatus('CANCELLED', t('Annuler ce devis ?'), t('Cette action est définitive.'), true)} disabled={busy}>
                   {t("Annuler le devis")}
                 </Button>
@@ -300,7 +305,7 @@ export default function DocumentViewPage() {
                         {p.notes && ` · ${p.notes}`}
                       </span>
                     </div>
-                    {doc.status !== 'CANCELLED' && (user?.role === 'ADMIN' || p.createdById === user?.id) && (
+                    {doc.status !== 'CANCELLED' && can('invoices.payments') && (
                       <button
                         onClick={async () =>
                           (await confirmDialog({ title: t('Supprimer ce paiement de {amount} ?', { amount: money(p.amount) }), message: t('Le reste à payer de la facture sera recalculé.'), confirmLabel: t('Supprimer'), danger: true })) &&

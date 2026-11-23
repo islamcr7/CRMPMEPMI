@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
+import { dataFilters } from '../lib/visibility.js';
 
 const router = Router();
 
@@ -16,6 +17,8 @@ router.get('/', async (req, res) => {
   const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - (monthsCount - 1), 1);
   const yearStart = new Date(now.getFullYear(), 0, 1);
   const userId = req.user!.id;
+  // Chiffres limités à ce que le rôle peut voir (droits de lecture + portée)
+  const f = dataFilters(req.user!);
 
   const [
     contactsTotal,
@@ -30,17 +33,17 @@ router.get('/', async (req, res) => {
     paidThisYear,
     recentActivities,
   ] = await Promise.all([
-    prisma.contact.count(),
-    prisma.contact.count({ where: { createdAt: { gte: monthStart } } }),
-    prisma.company.count(),
-    prisma.deal.groupBy({ by: ['stage'], _count: { _all: true }, _sum: { amount: true } }),
+    prisma.contact.count({ where: f.contact }),
+    prisma.contact.count({ where: { AND: [f.contact, { createdAt: { gte: monthStart } }] } }),
+    prisma.company.count({ where: f.company }),
+    prisma.deal.groupBy({ by: ['stage'], where: f.deal, _count: { _all: true }, _sum: { amount: true } }),
     prisma.deal.findMany({
-      where: { stage: 'WON', closedAt: { gte: sixMonthsAgo } },
+      where: { AND: [f.deal, { stage: 'WON', closedAt: { gte: sixMonthsAgo } }] },
       select: { amount: true, closedAt: true },
     }),
-    prisma.activity.count({ where: { done: false, dueDate: { lt: today } } }),
+    prisma.activity.count({ where: { AND: [f.activity, { done: false, dueDate: { lt: today } }] } }),
     prisma.activity.findMany({
-      where: { assigneeId: userId, done: false, dueDate: { lt: tomorrow } },
+      where: { AND: [f.activity, { assigneeId: userId, done: false, dueDate: { lt: tomorrow } }] },
       orderBy: { dueDate: 'asc' },
       take: 10,
       include: {
@@ -49,16 +52,16 @@ router.get('/', async (req, res) => {
         deal: { select: { id: true, title: true } },
       },
     }),
-    prisma.document.aggregate({ where: { type: 'INVOICE', status: 'SENT' }, _sum: { total: true, amountPaid: true }, _count: true }),
+    prisma.document.aggregate({ where: { AND: [f.invoice, { status: 'SENT' }] }, _sum: { total: true, amountPaid: true }, _count: true }),
     prisma.document.aggregate({
-      where: { type: 'INVOICE', status: 'SENT', dueDate: { lt: now } },
+      where: { AND: [f.invoice, { status: 'SENT', dueDate: { lt: now } }] },
       _sum: { total: true, amountPaid: true },
       _count: true,
     }),
     // Encaissements réels de l'année (paiements, y compris partiels)
-    prisma.payment.aggregate({ where: { date: { gte: yearStart }, document: { status: { not: 'CANCELLED' } } }, _sum: { amount: true } }),
+    prisma.payment.aggregate({ where: { date: { gte: yearStart }, document: { AND: [f.invoice, { status: { not: 'CANCELLED' } }] } }, _sum: { amount: true } }),
     prisma.activity.findMany({
-      where: { done: true },
+      where: { AND: [f.activity, { done: true }] },
       orderBy: { completedAt: 'desc' },
       take: 8,
       include: {
@@ -75,7 +78,7 @@ router.get('/', async (req, res) => {
   });
 
   const openDeals = await prisma.deal.findMany({
-    where: { stage: { notIn: ['WON', 'LOST'] } },
+    where: { AND: [f.deal, { stage: { notIn: ['WON', 'LOST'] } }] },
     select: { amount: true, probability: true },
   });
   const pipelineValue = openDeals.reduce((s, d) => s + Number(d.amount), 0);
@@ -95,7 +98,7 @@ router.get('/', async (req, res) => {
     }
   }
   const payments = await prisma.payment.findMany({
-    where: { date: { gte: sixMonthsAgo }, document: { status: { not: 'CANCELLED' } } },
+    where: { date: { gte: sixMonthsAgo }, document: { AND: [f.invoice, { status: { not: 'CANCELLED' } }] } },
     select: { amount: true, date: true },
   });
   for (const p of payments) {

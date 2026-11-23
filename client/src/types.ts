@@ -1,4 +1,34 @@
-export type Role = 'ADMIN' | 'SALES';
+/** Portée d'un rôle : seulement ses fiches, ou toutes */
+export type DataScope = 'OWN' | 'ALL';
+
+export interface RoleRef {
+  id: string;
+  name: string;
+  scope: DataScope;
+  system: boolean;
+}
+
+export interface AppRole extends RoleRef {
+  description: string | null;
+  permissions: string[];
+  _count?: { users: number };
+}
+
+export interface PermissionCatalog {
+  modules: { key: string; label: string; actions: { key: string; label: string }[] }[];
+  locked: string[];
+}
+
+/** Utilisateur connecté, avec les droits de son rôle */
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string;
+  roleId: string;
+  roleName: string;
+  scope: DataScope;
+  permissions: string[];
+}
 export type ContactStatus = 'LEAD' | 'PROSPECT' | 'CUSTOMER' | 'INACTIVE';
 export type DealStage = 'NEW' | 'QUALIFIED' | 'PROPOSAL' | 'NEGOTIATION' | 'WON' | 'LOST';
 export type ActivityType = 'CALL' | 'MEETING' | 'EMAIL' | 'TASK' | 'NOTE';
@@ -16,7 +46,8 @@ export interface UserRef {
 
 export interface User extends UserRef {
   email: string;
-  role: Role;
+  roleId?: string;
+  role?: RoleRef;
   active?: boolean;
   createdAt?: string;
 }

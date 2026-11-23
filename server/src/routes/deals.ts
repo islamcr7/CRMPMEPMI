@@ -3,7 +3,8 @@ import { z } from 'zod';
 import type { DealStage, Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { notFound, optDate, optId, optStr, qs } from '../lib/http.js';
-import { assertCanDelete } from '../middleware/auth.js';
+import { assertAssignable, scope, type AuthUser } from '../middleware/auth.js';
+import { relatedIncludes } from '../lib/visibility.js';
 
 const router = Router();
 
@@ -40,33 +41,40 @@ router.get('/', async (req, res) => {
   const ownerId = qs(req, 'ownerId');
   const stage = qs(req, 'stage');
   const where: Prisma.DealWhereInput = {
-    ...(ownerId ? { ownerId } : {}),
-    ...(stage && (STAGES as readonly string[]).includes(stage) ? { stage: stage as DealStage } : {}),
-    ...(q
-      ? {
-          OR: [
-            { title: { contains: q, mode: 'insensitive' } },
-            { company: { name: { contains: q, mode: 'insensitive' } } },
-          ],
-        }
-      : {}),
+    AND: [
+      scope.deal(req.user!),
+      ownerId ? { ownerId } : {},
+      stage && (STAGES as readonly string[]).includes(stage) ? { stage: stage as DealStage } : {},
+      q
+        ? {
+            OR: [
+              { title: { contains: q, mode: 'insensitive' } },
+              { company: { name: { contains: q, mode: 'insensitive' } } },
+            ],
+          }
+        : {},
+    ],
   };
   const deals = await prisma.deal.findMany({ where, include, orderBy: { updatedAt: 'desc' }, take: 1000 });
   res.json(deals);
 });
 
 router.get('/:id', async (req, res) => {
-  const deal = await prisma.deal.findUnique({
-    where: { id: req.params.id },
-    include: {
-      ...include,
-      activities: { orderBy: [{ done: 'asc' }, { dueDate: 'asc' }], include: { assignee: include.owner } },
-      documents: { orderBy: { issueDate: 'desc' } },
-    },
+  const u = req.user!;
+  const { activities, documents } = relatedIncludes(u);
+  const deal = await prisma.deal.findFirst({
+    where: { id: String(req.params.id), ...scope.deal(u) },
+    include: { ...include, activities: { ...activities, take: undefined }, documents },
   });
   if (!deal) throw notFound('Opportunité');
   res.json(deal);
 });
+
+async function findScoped(id: string, u: AuthUser) {
+  const deal = await prisma.deal.findFirst({ where: { id, ...scope.deal(u) } });
+  if (!deal) throw notFound('Opportunité');
+  return deal;
+}
 
 /** Ajuste probabilité et date de clôture quand l'étape change. */
 function stageSideEffects(stage: DealStage | undefined, probability: number | undefined) {
@@ -79,6 +87,7 @@ function stageSideEffects(stage: DealStage | undefined, probability: number | un
 
 router.post('/', async (req, res) => {
   const data = schema.parse(req.body);
+  assertAssignable(req.user!, data.ownerId);
   const stage = data.stage ?? 'NEW';
   const deal = await prisma.deal.create({
     data: {
@@ -94,8 +103,8 @@ router.post('/', async (req, res) => {
 
 router.patch('/:id', async (req, res) => {
   const data = schema.partial().parse(req.body);
-  const current = await prisma.deal.findUnique({ where: { id: req.params.id } });
-  if (!current) throw notFound('Opportunité');
+  assertAssignable(req.user!, data.ownerId);
+  const current = await findScoped(String(req.params.id), req.user!);
   const stageChanged = data.stage && data.stage !== current.stage;
   const deal = await prisma.deal.update({
     where: { id: current.id },
@@ -106,9 +115,7 @@ router.patch('/:id', async (req, res) => {
 });
 
 router.delete('/:id', async (req, res) => {
-  const deal = await prisma.deal.findUnique({ where: { id: req.params.id } });
-  if (!deal) throw notFound('Opportunité');
-  assertCanDelete(req.user!, deal.ownerId);
+  const deal = await findScoped(String(req.params.id), req.user!);
   await prisma.deal.delete({ where: { id: deal.id } });
   res.status(204).end();
 });

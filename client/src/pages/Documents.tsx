@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
 import { api, toQuery } from '../lib/api';
+import { useAuth } from '../lib/auth';
 import { formatDate, fullName, isOverdue, useMoney } from '../lib/format';
 import { DOC_STATUSES } from '../lib/labels';
 import type { DocumentSummary, DocumentType, Paginated } from '../types';
@@ -30,6 +31,7 @@ export function DocumentStatusBadges({ d }: { d: DocumentSummary }) {
 
 export default function DocumentsPage({ type }: { type: DocumentType }) {
   const navigate = useNavigate();
+  const { can } = useAuth();
   const money = useMoney();
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('');
@@ -54,9 +56,11 @@ export default function DocumentsPage({ type }: { type: DocumentType }) {
         actions={
           <>
             {isInvoice && <ExportButton entity="invoices" />}
-            <Button onClick={() => navigate(`/documents/new/${type}`)}>
-              <Plus className="h-4 w-4" /> {isInvoice ? t('Nouvelle facture') : t('Nouveau devis')}
-            </Button>
+            {can(isInvoice ? 'invoices.create' : 'quotes.create') && (
+              <Button onClick={() => navigate(`/documents/new/${type}`)}>
+                <Plus className="h-4 w-4" /> {isInvoice ? t('Nouvelle facture') : t('Nouveau devis')}
+              </Button>
+            )}
           </>
         }
       />

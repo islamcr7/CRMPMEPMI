@@ -7,9 +7,25 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
-  ADMIN
-  SALES
+/// Portée des données visibles par un rôle : toutes les fiches ou seulement les siennes
+enum DataScope {
+  OWN
+  ALL
+}
+
+/// Rôle personnalisable : liste de droits « module.action » + portée
+model AppRole {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?
+  permissions String[]
+  scope       DataScope @default(ALL)
+  /// Rôle système (Administrateur) : non supprimable, droits d'administration verrouillés
+  system      Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  users User[]
 }
 
 enum ContactStatus {
@@ -65,7 +81,8 @@ model User {
   email        String   @unique
   name         String
   passwordHash String
-  role         Role     @default(SALES)
+  roleId       String
+  role         AppRole  @relation(fields: [roleId], references: [id], onDelete: Restrict)
   active       Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

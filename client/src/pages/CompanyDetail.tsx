@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Building2, FilePlus, Globe, Phone, Plus, Trash2 } from 'lucide-react';
 import { api } from '../lib/api';
+import { useAuth } from '../lib/auth';
 import { formatDate, useMoney } from '../lib/format';
 import { useTrackRecent } from '../lib/recent';
 import { COMPANY_SIZES } from '../lib/labels';
@@ -22,9 +23,12 @@ export default function CompanyDetailPage() {
   const qc = useQueryClient();
   const money = useMoney();
   const { data: users } = useUsers();
-  const [tab, setTab] = useState<'activity' | 'details'>('activity');
+  const { user, can } = useAuth();
+  const canEdit = can('companies.edit');
+  const showActivity = can('activities.view');
+  const [tab, setTab] = useState<'activity' | 'details'>(showActivity ? 'activity' : 'details');
   const [modal, setModal] = useState<'contact' | 'deal' | null>(null);
-  const save = useFieldSaver(`/companies/${id}`);
+  const save = useFieldSaver(`/companies/${id}`, canEdit);
 
   const { data: c, isLoading, error } = useQuery({ queryKey: ['company', id], queryFn: () => api<Company>(`/companies/${id}`) });
   useTrackRecent(c ? { kind: 'company', id: c.id, title: c.name, sub: c.city ?? undefined, to: `/companies/${c.id}` } : null);
@@ -59,17 +63,24 @@ export default function CompanyDetailPage() {
         title={c.name}
         actions={
           <>
-            <Button variant="secondary" onClick={() => setModal('contact')}>
-              <Plus className="h-4 w-4" /> {t("Contact")}
-            </Button>
-            <Button variant="secondary" onClick={() => setModal('deal')}>
-              <Plus className="h-4 w-4" /> {t("Opportunité")}
-            </Button>
-            <Link to={`/documents/new/QUOTE?companyId=${c.id}`}>
-              <Button>
-                <FilePlus className="h-4 w-4" /> {t("Devis")}
+            {can('contacts.create') && (
+              <Button variant="secondary" onClick={() => setModal('contact')}>
+                <Plus className="h-4 w-4" /> {t("Contact")}
               </Button>
-            </Link>
+            )}
+            {can('deals.create') && (
+              <Button variant="secondary" onClick={() => setModal('deal')}>
+                <Plus className="h-4 w-4" /> {t("Opportunité")}
+              </Button>
+            )}
+            {can('quotes.create') && (
+              <Link to={`/documents/new/QUOTE?companyId=${c.id}`}>
+                <Button>
+                  <FilePlus className="h-4 w-4" /> {t("Devis")}
+                </Button>
+              </Link>
+            )}
+            {can('companies.delete') && (
             <Button
               variant="danger"
               aria-label={t("Supprimer l’entreprise")}
@@ -85,6 +96,7 @@ export default function CompanyDetailPage() {
             >
               <Trash2 className="h-4 w-4" />
             </Button>
+            )}
           </>
         }
         highlights={[
@@ -117,13 +129,13 @@ export default function CompanyDetailPage() {
             value={tab}
             onChange={setTab}
             tabs={[
-              { value: 'activity', label: t('Activité'), count: c.activities?.length ?? 0 },
+              ...(showActivity ? [{ value: 'activity' as const, label: t('Activité'), count: c.activities?.length ?? 0 }] : []),
               { value: 'details', label: t('Détails') },
             ]}
           />
-          {tab === 'activity' ? (
+          {tab === 'activity' && showActivity ? (
             <>
-              <ActivityComposer links={{ companyId: c.id }} />
+              {can('activities.create') && <ActivityComposer links={{ companyId: c.id }} />}
               <Timeline activities={c.activities ?? []} />
             </>
           ) : (
@@ -148,7 +160,7 @@ export default function CompanyDetailPage() {
                 value={c.ownerId ?? ''}
                 display={<Owner owner={c.owner} />}
                 options={[{ value: '', label: t('— Non attribué —') }, ...(users ?? []).filter((u) => u.active).map((u) => ({ value: u.id, label: u.name }))]}
-                onSave={save('ownerId')}
+                onSave={user?.scope === 'OWN' ? undefined : save('ownerId')}
               />
               <InlineField label={t("Adresse")} value={c.address} onSave={save('address')} className="sm:col-span-2" />
               <InlineField label={t("Ville")} value={c.city} onSave={save('city')} />
@@ -160,29 +172,35 @@ export default function CompanyDetailPage() {
         </section>
 
         <div className="space-y-6">
+          {can('contacts.view') && (
           <Card
             title={`Contacts (${c.contacts?.length ?? 0})`}
             actions={
-              <Button size="sm" variant="ghost" onClick={() => setModal('contact')}>
+              can('contacts.create') && <Button size="sm" variant="ghost" onClick={() => setModal('contact')}>
                 <Plus className="h-4 w-4" /> {t("Ajouter")}
               </Button>
             }
           >
             <ContactRows contacts={c.contacts ?? []} />
           </Card>
+          )}
+          {can('deals.view') && (
           <Card
             title={t('Opportunités ({n})', { n: deals.length })}
             actions={
-              <Button size="sm" variant="ghost" onClick={() => setModal('deal')}>
+              can('deals.create') && <Button size="sm" variant="ghost" onClick={() => setModal('deal')}>
                 <Plus className="h-4 w-4" /> {t("Ajouter")}
               </Button>
             }
           >
             <DealRows deals={deals} />
           </Card>
+          )}
+          {(can('quotes.view') || can('invoices.view')) && (
           <Card title={t('Devis & factures ({n})', { n: c.documents?.length ?? 0 })}>
             <DocumentRows documents={c.documents ?? []} />
           </Card>
+          )}
         </div>
       </div>
 

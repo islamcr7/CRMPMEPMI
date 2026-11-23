@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { HttpError } from '../lib/http.js';
-import { AUTH_COOKIE, cookieOptions, requireAuth, signToken } from '../middleware/auth.js';
+import { AUTH_COOKIE, cookieOptions, requireAuth, signToken, toAuthUser } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -25,7 +25,7 @@ router.post('/login', async (req, res) => {
   }
 
   const { email, password } = loginSchema.parse(req.body);
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findUnique({ where: { email }, include: { role: true } });
   const ok = user && user.active && (await bcrypt.compare(password, user.passwordHash));
   if (!ok) {
     const e = entry && entry.until > Date.now() ? entry : { count: 0, until: Date.now() + WINDOW_MS };
@@ -36,7 +36,7 @@ router.post('/login', async (req, res) => {
   attempts.delete(ip);
 
   res.cookie(AUTH_COOKIE, signToken(user.id), cookieOptions);
-  res.json({ id: user.id, email: user.email, name: user.name, role: user.role });
+  res.json(toAuthUser(user));
 });
 
 router.post('/logout', (_req, res) => {

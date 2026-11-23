@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { notFound, optDate, optId, optStr, qs } from '../lib/http.js';
-import { assertCanDelete } from '../middleware/auth.js';
+import { scope, type AuthUser } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -46,6 +46,7 @@ router.get('/', async (req, res) => {
   const q = qs(req, 'q');
 
   const where: Prisma.ActivityWhereInput = {
+    AND: [scope.activity(req.user!)],
     ...(status === 'open' ? { done: false } : status === 'done' ? { done: true } : {}),
     ...(range === 'overdue' ? { dueDate: { lt: today }, done: false } : {}),
     ...(range === 'today' ? { dueDate: { gte: today, lt: tomorrow } } : {}),
@@ -65,6 +66,13 @@ router.get('/', async (req, res) => {
   res.json(items);
 });
 
+/** Activité visible (assignée ou créée par l'utilisateur en portée « mes fiches »), sinon 404. */
+async function findScoped(id: string, u: AuthUser) {
+  const activity = await prisma.activity.findFirst({ where: { id, ...scope.activity(u) } });
+  if (!activity) throw notFound('Activité');
+  return activity;
+}
+
 router.post('/', async (req, res) => {
   const data = schema.parse(req.body);
   const activity = await prisma.activity.create({
@@ -83,8 +91,9 @@ router.post('/', async (req, res) => {
 
 router.patch('/:id', async (req, res) => {
   const data = schema.partial().parse(req.body);
+  const current = await findScoped(String(req.params.id), req.user!);
   const activity = await prisma.activity.update({
-    where: { id: req.params.id },
+    where: { id: current.id },
     data: {
       ...data,
       ...(data.done === undefined ? {} : { completedAt: data.done ? new Date() : null }),
@@ -95,9 +104,7 @@ router.patch('/:id', async (req, res) => {
 });
 
 router.delete('/:id', async (req, res) => {
-  const activity = await prisma.activity.findUnique({ where: { id: req.params.id } });
-  if (!activity) throw notFound('Activité');
-  if (activity.createdById !== req.user!.id) assertCanDelete(req.user!, activity.assigneeId);
+  const activity = await findScoped(String(req.params.id), req.user!);
   await prisma.activity.delete({ where: { id: activity.id } });
   res.status(204).end();
 });

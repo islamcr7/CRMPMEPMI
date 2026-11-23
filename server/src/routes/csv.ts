@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { ContactStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { HttpError } from '../lib/http.js';
+import { assertPerm, can, scope } from '../middleware/auth.js';
 
 /* ======================================================================
  * Export CSV — séparateur « ; » + BOM UTF-8 : s'ouvre directement dans Excel (FR)
@@ -36,8 +37,9 @@ const STATUS_FR: Record<string, string> = { LEAD: 'Piste', PROSPECT: 'Prospect',
 const STAGE_FR: Record<string, string> = { NEW: 'Nouveau', QUALIFIED: 'Qualifié', PROPOSAL: 'Proposition', NEGOTIATION: 'Négociation', WON: 'Gagné', LOST: 'Perdu' };
 const DOC_STATUS_FR: Record<string, string> = { DRAFT: 'Brouillon', SENT: 'Émise', PAID: 'Payée', CANCELLED: 'Annulée', ACCEPTED: 'Accepté', REFUSED: 'Refusé' };
 
-exportRouter.get('/contacts', async (_req, res) => {
-  const rows = await prisma.contact.findMany({ orderBy: [{ lastName: 'asc' }], include: { company: true, owner: true } });
+exportRouter.get('/contacts', async (req, res) => {
+  assertPerm(req.user!, 'contacts.view');
+  const rows = await prisma.contact.findMany({ where: scope.contact(req.user!), orderBy: [{ lastName: 'asc' }], include: { company: true, owner: true } });
   sendCsv(
     res,
     'contacts',
@@ -46,8 +48,9 @@ exportRouter.get('/contacts', async (_req, res) => {
   );
 });
 
-exportRouter.get('/companies', async (_req, res) => {
-  const rows = await prisma.company.findMany({ orderBy: { name: 'asc' }, include: { owner: true } });
+exportRouter.get('/companies', async (req, res) => {
+  assertPerm(req.user!, 'companies.view');
+  const rows = await prisma.company.findMany({ where: scope.company(req.user!), orderBy: { name: 'asc' }, include: { owner: true } });
   sendCsv(
     res,
     'entreprises',
@@ -56,8 +59,9 @@ exportRouter.get('/companies', async (_req, res) => {
   );
 });
 
-exportRouter.get('/deals', async (_req, res) => {
-  const rows = await prisma.deal.findMany({ orderBy: { createdAt: 'desc' }, include: { company: true, contact: true, owner: true } });
+exportRouter.get('/deals', async (req, res) => {
+  assertPerm(req.user!, 'deals.view');
+  const rows = await prisma.deal.findMany({ where: scope.deal(req.user!), orderBy: { createdAt: 'desc' }, include: { company: true, contact: true, owner: true } });
   sendCsv(
     res,
     'opportunites',
@@ -77,9 +81,10 @@ exportRouter.get('/deals', async (_req, res) => {
   );
 });
 
-exportRouter.get('/invoices', async (_req, res) => {
+exportRouter.get('/invoices', async (req, res) => {
+  assertPerm(req.user!, 'invoices.view');
   const rows = await prisma.document.findMany({
-    where: { type: { in: ['INVOICE', 'CREDIT_NOTE'] }, NOT: { number: { startsWith: 'BROUILLON-' } } },
+    where: { ...scope.document(req.user!), type: { in: ['INVOICE', 'CREDIT_NOTE'] }, NOT: { number: { startsWith: 'BROUILLON-' } } },
     orderBy: { number: 'asc' },
     include: { company: true },
   });
@@ -107,7 +112,8 @@ exportRouter.get('/invoices', async (_req, res) => {
   );
 });
 
-exportRouter.get('/products', async (_req, res) => {
+exportRouter.get('/products', async (req, res) => {
+  assertPerm(req.user!, 'products.view');
   const rows = await prisma.product.findMany({ orderBy: { name: 'asc' } });
   sendCsv(
     res,
@@ -210,6 +216,7 @@ const lineNo = (i: number) => i + 2;
 const issueMessage = (e: z.ZodError) => e.issues.map((i) => i.message).join(', ');
 
 importRouter.post('/companies', async (req, res) => {
+  assertPerm(req.user!, 'companies.create');
   const { rows } = bodySchema.parse(req.body);
   const result: ImportResult = { created: 0, skipped: 0, errors: [] };
   const existing = new Set((await prisma.company.findMany({ select: { name: true } })).map((c) => norm(c.name)));
@@ -237,6 +244,8 @@ importRouter.post('/companies', async (req, res) => {
 });
 
 importRouter.post('/contacts', async (req, res) => {
+  assertPerm(req.user!, 'contacts.create');
+  const canCreateCompanies = can(req.user, 'companies.create');
   const { rows } = bodySchema.parse(req.body);
   const result: ImportResult & { companiesCreated: number } = { created: 0, skipped: 0, errors: [], companiesCreated: 0 };
 
@@ -276,6 +285,10 @@ importRouter.post('/contacts', async (req, res) => {
     let companyId: string | null = null;
     if (companyName) {
       companyId = companies.get(norm(companyName)) ?? null;
+      if (!companyId && !canCreateCompanies) {
+        result.errors.push({ row: lineNo(i), message: `Entreprise inconnue « ${companyName} » (droit de création d’entreprise requis)` });
+        continue;
+      }
       if (!companyId) {
         const created = await prisma.company.create({ data: { name: companyName, ownerId: req.user!.id } });
         companyId = created.id;
@@ -301,6 +314,7 @@ importRouter.post('/contacts', async (req, res) => {
 });
 
 importRouter.post('/products', async (req, res) => {
+  assertPerm(req.user!, 'products.manage');
   const { rows } = bodySchema.parse(req.body);
   const result: ImportResult = { created: 0, skipped: 0, errors: [] };
   const org = await prisma.organization.findUnique({ where: { id: 'default' } });

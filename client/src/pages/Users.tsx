@@ -1,28 +1,35 @@
 import { useState, type FormEvent } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
+import { Plus, ShieldCheck } from 'lucide-react';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { formatDate } from '../lib/format';
-import type { Role, User } from '../types';
+import type { AppRole, User } from '../types';
 import { Badge, Button, Card, ErrorBox, FormActions, Input, Modal, PageHeader, Select, Spinner } from '../components/ui';
 import { useUsers } from '../components/pickers';
 import { toast } from '../components/feedback';
 
-import { t } from '../lib/i18n';
+import { t, tMaybe } from '../lib/i18n';
 function UserForm({ user, onClose }: { user?: User; onClose: () => void }) {
   const qc = useQueryClient();
   const [name, setName] = useState(user?.name ?? '');
   const [email, setEmail] = useState(user?.email ?? '');
-  const [role, setRole] = useState<Role>(user?.role ?? 'SALES');
+  const { data: roles } = useQuery({ queryKey: ['roles'], queryFn: () => api<AppRole[]>('/roles') });
+  const [roleId, setRoleId] = useState(user?.roleId ?? '');
+  // Par défaut, un nouvel utilisateur reçoit le rôle « Commercial » s'il existe
+  const effectiveRoleId = roleId || roles?.find((r) => r.id === 'role_sales')?.id || roles?.[0]?.id || '';
+  const selectedRole = roles?.find((r) => r.id === effectiveRoleId);
   const [password, setPassword] = useState('');
   const save = useMutation({
     mutationFn: () =>
       user
-        ? api(`/users/${user.id}`, 'PATCH', { name, role, ...(password ? { password } : {}) })
-        : api('/users', 'POST', { name, email, role, password }),
+        ? api(`/users/${user.id}`, 'PATCH', { name, roleId: effectiveRoleId, ...(password ? { password } : {}) })
+        : api('/users', 'POST', { name, email, roleId: effectiveRoleId, password }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['users'] });
+      qc.invalidateQueries({ queryKey: ['roles'] });
+      toast.success(user ? t('Utilisateur mis à jour') : t('Utilisateur créé'));
       onClose();
     },
   });
@@ -36,10 +43,21 @@ function UserForm({ user, onClose }: { user?: User; onClose: () => void }) {
         <ErrorBox error={save.error} />
         <Input label={t("Nom complet *")} value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
         <Input label={t("Email *")} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={!!user} />
-        <Select label={t("Rôle")} value={role} onChange={(e) => setRole(e.target.value as Role)}>
-          <option value="SALES">{t("Commercial")}</option>
-          <option value="ADMIN">{t("Administrateur")}</option>
-        </Select>
+        <div>
+          <Select label={t('Rôle')} value={effectiveRoleId} onChange={(e) => setRoleId(e.target.value)} required>
+            {roles?.map((r) => (
+              <option key={r.id} value={r.id}>
+                {tMaybe(r.name)}
+              </option>
+            ))}
+          </Select>
+          {selectedRole && (
+            <p className="mt-1 text-xs text-slate-500">
+              {selectedRole.description ? tMaybe(selectedRole.description) + ' · ' : ''}
+              {selectedRole.scope === 'ALL' ? t('Toutes les fiches') : t('Seulement ses fiches')}
+            </p>
+          )}
+        </div>
         <Input
           label={user ? t('Nouveau mot de passe (laisser vide pour ne pas changer)') : t('Mot de passe initial *')}
           type="password"
@@ -56,7 +74,7 @@ function UserForm({ user, onClose }: { user?: User; onClose: () => void }) {
 }
 
 export default function UsersPage() {
-  const { user: me } = useAuth();
+  const { user: me, can } = useAuth();
   const qc = useQueryClient();
   const { data, isLoading, error } = useUsers();
   const [editing, setEditing] = useState<User | 'new' | null>(null);
@@ -75,9 +93,18 @@ export default function UsersPage() {
         title={t("Utilisateurs")}
         subtitle={t("Gérez les accès de votre équipe")}
         actions={
-          <Button onClick={() => setEditing('new')}>
-            <Plus className="h-4 w-4" /> {t("Nouvel utilisateur")}
-          </Button>
+          <>
+            {can('admin.roles') && (
+              <Link to="/roles">
+                <Button variant="secondary">
+                  <ShieldCheck className="h-4 w-4" /> {t('Rôles & droits')}
+                </Button>
+              </Link>
+            )}
+            <Button onClick={() => setEditing('new')}>
+              <Plus className="h-4 w-4" /> {t("Nouvel utilisateur")}
+            </Button>
+          </>
         }
       />
       <Card>
@@ -105,7 +132,8 @@ export default function UsersPage() {
                     </td>
                     <td className="hidden px-4 py-3 text-slate-600 sm:table-cell">{u.email}</td>
                     <td className="px-4 py-3">
-                      <Badge tone={u.role === 'ADMIN' ? 'violet' : 'blue'}>{u.role === 'ADMIN' ? t('Admin') : t('Commercial')}</Badge>
+                      <Badge tone={u.role?.system ? 'violet' : 'blue'}>{u.role ? tMaybe(u.role.name) : '—'}</Badge>
+                      {u.role?.scope === 'OWN' && <span className="ml-1.5 text-xs text-slate-400">{t('Ses fiches')}</span>}
                     </td>
                     <td className="px-4 py-3">
                       <Badge tone={u.active ? 'green' : 'slate'}>{u.active ? t('Actif') : t('Désactivé')}</Badge>

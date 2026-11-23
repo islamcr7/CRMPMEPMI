@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Building2, FilePlus, KanbanSquare, Trash2, User } from 'lucide-react';
 import { api } from '../lib/api';
+import { useAuth } from '../lib/auth';
 import { formatDate, fullName, isOverdue, useMoney } from '../lib/format';
 import { useTrackRecent } from '../lib/recent';
 import { STAGES, label, tone } from '../lib/labels';
@@ -29,9 +30,12 @@ export default function DealDetailPage() {
   const qc = useQueryClient();
   const money = useMoney();
   const { data: users } = useUsers();
-  const [tab, setTab] = useState<'activity' | 'details'>('activity');
+  const { user, can } = useAuth();
+  const canEdit = can('deals.edit');
+  const showActivity = can('activities.view');
+  const [tab, setTab] = useState<'activity' | 'details'>(showActivity ? 'activity' : 'details');
   const { data: d, isLoading, error } = useQuery({ queryKey: ['deal', id], queryFn: () => api<Deal>(`/deals/${id}`) });
-  const save = useFieldSaver(`/deals/${id}`);
+  const save = useFieldSaver(`/deals/${id}`, canEdit);
 
   useTrackRecent(d ? { kind: 'deal', id: d.id, title: d.title, sub: d.company?.name, to: `/deals/${d.id}` } : null);
 
@@ -76,11 +80,14 @@ export default function DealDetailPage() {
         badges={<Badge tone={tone(STAGES, d.stage)}>{label(STAGES, d.stage)}</Badge>}
         actions={
           <>
-            <Link to={`/documents/new/QUOTE?dealId=${d.id}`}>
-              <Button>
-                <FilePlus className="h-4 w-4" /> {t("Créer un devis")}
-              </Button>
-            </Link>
+            {can('quotes.create') && (
+              <Link to={`/documents/new/QUOTE?dealId=${d.id}`}>
+                <Button>
+                  <FilePlus className="h-4 w-4" /> {t("Créer un devis")}
+                </Button>
+              </Link>
+            )}
+            {can('deals.delete') && (
             <Button
               variant="danger"
               aria-label={t("Supprimer l’opportunité")}
@@ -88,6 +95,7 @@ export default function DealDetailPage() {
             >
               <Trash2 className="h-4 w-4" />
             </Button>
+            )}
           </>
         }
         highlights={[
@@ -119,6 +127,7 @@ export default function DealDetailPage() {
         onLose={async () => (await confirmDialog({ title: t('Marquer l’opportunité comme perdue ?'), message: t('Pensez à consigner la raison dans une note.'), confirmLabel: t('Marquer perdue'), danger: true })) && setStage.mutate('LOST')}
         onReopen={() => setStage.mutate('NEGOTIATION')}
         pending={setStage.isPending}
+        readOnly={!canEdit}
       />
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -127,13 +136,13 @@ export default function DealDetailPage() {
             value={tab}
             onChange={setTab}
             tabs={[
-              { value: 'activity', label: t('Activité'), count: d.activities?.length ?? 0 },
+              ...(showActivity ? [{ value: 'activity' as const, label: t('Activité'), count: d.activities?.length ?? 0 }] : []),
               { value: 'details', label: t('Détails') },
             ]}
           />
-          {tab === 'activity' ? (
+          {tab === 'activity' && showActivity ? (
             <>
-              <ActivityComposer links={links} />
+              {can('activities.create') && <ActivityComposer links={links} />}
               <Timeline activities={d.activities ?? []} />
             </>
           ) : (
@@ -156,7 +165,7 @@ export default function DealDetailPage() {
                 value={d.ownerId ?? ''}
                 display={<Owner owner={d.owner} />}
                 options={[{ value: '', label: t('— Non attribué —') }, ...(users ?? []).filter((u) => u.active).map((u) => ({ value: u.id, label: u.name }))]}
-                onSave={save('ownerId')}
+                onSave={user?.scope === 'OWN' ? undefined : save('ownerId')}
               />
               <InlineField label={t("Notes")} type="textarea" value={d.notes} onSave={save('notes')} className="sm:col-span-2" />
               <InlineField label={t("Créée le")} value={formatDate(d.createdAt)} readOnly />
@@ -185,7 +194,7 @@ export default function DealDetailPage() {
           <Card
             title={t('Devis & factures ({n})', { n: d.documents?.length ?? 0 })}
             actions={
-              <Link to={`/documents/new/QUOTE?dealId=${d.id}`} className="text-xs font-medium text-indigo-600 hover:underline">
+              can('quotes.create') && <Link to={`/documents/new/QUOTE?dealId=${d.id}`} className="text-xs font-medium text-indigo-600 hover:underline">
                 {t("+ Devis")}
               </Link>
             }

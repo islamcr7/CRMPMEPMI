@@ -3,8 +3,10 @@ import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { notFound, optId, optStr, pagination, qs } from '../lib/http.js';
-import { assertCanDelete } from '../middleware/auth.js';
+import { assertAssignable, can, scope, type AuthUser } from '../middleware/auth.js';
+import { relatedIncludes } from '../lib/visibility.js';
 
+// Droits contrôlés au montage : requireCrud('companies') (voir index.ts)
 const router = Router();
 
 const owner = { select: { id: true, name: true } } as const;
@@ -29,17 +31,20 @@ router.get('/', async (req, res) => {
   const q = qs(req, 'q');
   const ownerId = qs(req, 'ownerId');
   const where: Prisma.CompanyWhereInput = {
-    ...(ownerId ? { ownerId } : {}),
-    ...(q
-      ? {
-          OR: [
-            { name: { contains: q, mode: 'insensitive' } },
-            { city: { contains: q, mode: 'insensitive' } },
-            { industry: { contains: q, mode: 'insensitive' } },
-            { email: { contains: q, mode: 'insensitive' } },
-          ],
-        }
-      : {}),
+    AND: [
+      scope.company(req.user!),
+      ownerId ? { ownerId } : {},
+      q
+        ? {
+            OR: [
+              { name: { contains: q, mode: 'insensitive' } },
+              { city: { contains: q, mode: 'insensitive' } },
+              { industry: { contains: q, mode: 'insensitive' } },
+              { email: { contains: q, mode: 'insensitive' } },
+            ],
+          }
+        : {},
+    ],
   };
   // Tri : ?sort=name|city|industry|createdAt&dir=asc|desc
   const dir = qs(req, 'dir') === 'desc' ? 'desc' : 'asc';
@@ -62,25 +67,13 @@ router.get('/', async (req, res) => {
 });
 
 router.get('/:id', async (req, res) => {
-  const company = await prisma.company.findUnique({
-    where: { id: req.params.id },
+  const u = req.user!;
+  const company = await prisma.company.findFirst({
+    where: { id: String(req.params.id), ...scope.company(u) },
     include: {
       owner,
-      contacts: { orderBy: { lastName: 'asc' } },
-      deals: {
-        orderBy: { createdAt: 'desc' },
-        include: {
-          owner,
-          company: { select: { id: true, name: true } },
-          contact: { select: { id: true, firstName: true, lastName: true } },
-        },
-      },
-      activities: {
-        orderBy: [{ done: 'asc' }, { dueDate: 'asc' }],
-        take: 50,
-        include: { assignee: owner },
-      },
-      documents: { orderBy: { issueDate: 'desc' }, take: 50 },
+      contacts: { where: can(u, 'contacts.view') ? scope.contact(u) : { id: '__aucun__' }, orderBy: { lastName: 'asc' } },
+      ...relatedIncludes(u),
     },
   });
   if (!company) throw notFound('Entreprise');
@@ -89,22 +82,30 @@ router.get('/:id', async (req, res) => {
 
 router.post('/', async (req, res) => {
   const data = schema.parse(req.body);
+  assertAssignable(req.user!, data.ownerId);
   const company = await prisma.company.create({
     data: { ...data, ownerId: data.ownerId === undefined ? req.user!.id : data.ownerId },
   });
   res.status(201).json(company);
 });
 
+/** Fiche dans la portée de l'utilisateur, sinon 404. */
+async function findScoped(id: string, u: AuthUser) {
+  const company = await prisma.company.findFirst({ where: { id, ...scope.company(u) } });
+  if (!company) throw notFound('Entreprise');
+  return company;
+}
+
 router.patch('/:id', async (req, res) => {
   const data = schema.partial().parse(req.body);
-  const company = await prisma.company.update({ where: { id: req.params.id }, data });
+  assertAssignable(req.user!, data.ownerId);
+  const current = await findScoped(String(req.params.id), req.user!);
+  const company = await prisma.company.update({ where: { id: current.id }, data });
   res.json(company);
 });
 
 router.delete('/:id', async (req, res) => {
-  const company = await prisma.company.findUnique({ where: { id: req.params.id } });
-  if (!company) throw notFound('Entreprise');
-  assertCanDelete(req.user!, company.ownerId);
+  const company = await findScoped(String(req.params.id), req.user!);
   await prisma.company.delete({ where: { id: company.id } });
   res.status(204).end();
 });

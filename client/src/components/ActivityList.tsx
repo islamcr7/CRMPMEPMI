@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Calendar, CheckSquare, FileText, Mail, Pencil, Phone, Square, StickyNote, Trash2, Users } from 'lucide-react';
 import { api } from '../lib/api';
+import { useAuth } from '../lib/auth';
 import { ACTIVITY_TYPES, label } from '../lib/labels';
 import { formatDate, fullName, isOverdue } from '../lib/format';
 import type { Activity, ActivityType } from '../types';
@@ -21,6 +22,7 @@ export const ACTIVITY_ICONS: Record<ActivityType, typeof Phone> = {
 
 export function ActivityList({ items, showLinks = true, emptyText = t('Aucune activité') }: { items: Activity[]; showLinks?: boolean; emptyText?: string }) {
   const qc = useQueryClient();
+  const { can } = useAuth();
   const [editing, setEditing] = useState<Activity | null>(null);
   const toggle = useMutation({
     mutationFn: (a: Activity) => api(`/activities/${a.id}`, 'PATCH', { done: !a.done }),
@@ -49,8 +51,14 @@ export function ActivityList({ items, showLinks = true, emptyText = t('Aucune ac
           const late = !a.done && isOverdue(a.dueDate);
           return (
             <li key={a.id} className="group flex items-start gap-3 px-4 py-3">
-              {a.type === 'NOTE' ? (
-                <StickyNote className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
+              {a.type === 'NOTE' || !can('activities.edit') ? (
+                a.type === 'NOTE' ? (
+                  <StickyNote className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
+                ) : a.done ? (
+                  <CheckSquare className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
+                ) : (
+                  <Square className="mt-0.5 h-5 w-5 shrink-0 text-slate-300" />
+                )
               ) : (
                 <button
                   onClick={() => toggle.mutate(a)}
@@ -94,9 +102,12 @@ export function ActivityList({ items, showLinks = true, emptyText = t('Aucune ac
                 </div>
               </div>
               <div className="flex shrink-0 gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
+                {can('activities.edit') && (
                 <button onClick={() => setEditing(a)} className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label={t("Modifier")}>
                   <Pencil className="h-4 w-4" />
                 </button>
+                )}
+                {can('activities.delete') && (
                 <button
                   onClick={async () => (await confirmDialog({ title: t('Supprimer cette activité ?'), message: a.subject, confirmLabel: t('Supprimer'), danger: true })) && remove.mutate(a)}
                   className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-600"
@@ -104,6 +115,7 @@ export function ActivityList({ items, showLinks = true, emptyText = t('Aucune ac
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
+                )}
               </div>
             </li>
           );

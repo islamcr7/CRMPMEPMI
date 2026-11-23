@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { optStr } from '../lib/http.js';
-import { requireRole } from '../middleware/auth.js';
+import { requirePerm } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -28,7 +28,7 @@ router.get('/', async (_req, res) => {
   res.json(org);
 });
 
-router.put('/', requireRole('ADMIN'), async (req, res) => {
+router.put('/', requirePerm('admin.settings'), async (req, res) => {
   const data = schema.parse(req.body);
   const org = await prisma.organization.upsert({
     where: { id: 'default' },

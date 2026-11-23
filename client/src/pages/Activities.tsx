@@ -19,7 +19,7 @@ const TABS = [
 ] as const;
 
 export default function ActivitiesPage() {
-  const { user } = useAuth();
+  const { user, can } = useAuth();
   const { data: users } = useUsers();
   const [tab, setTab] = useState<(typeof TABS)[number]['key']>('open');
   const [assignee, setAssignee] = useState(user?.id ?? '');
@@ -39,9 +39,11 @@ export default function ActivitiesPage() {
         title={t("Activités")}
         subtitle={t("Appels, rendez-vous, relances et notes")}
         actions={
-          <Button onClick={() => setCreating(true)}>
-            <Plus className="h-4 w-4" /> {t("Nouvelle activité")}
-          </Button>
+          can('activities.create') && (
+            <Button onClick={() => setCreating(true)}>
+              <Plus className="h-4 w-4" /> {t("Nouvelle activité")}
+            </Button>
+          )
         }
       />
       <Card>

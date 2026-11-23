@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Mail, Phone, Plus, Trash2, User } from 'lucide-react';
 import { api } from '../lib/api';
+import { useAuth } from '../lib/auth';
 import { formatDate, fullName } from '../lib/format';
 import { useTrackRecent } from '../lib/recent';
 import { CONTACT_STATUSES, label, tone } from '../lib/labels';
@@ -27,9 +28,12 @@ export default function ContactDetailPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { data: users } = useUsers();
-  const [tab, setTab] = useState<'activity' | 'details'>('activity');
+  const { user, can } = useAuth();
+  const canEdit = can('contacts.edit');
+  const showActivity = can('activities.view');
+  const [tab, setTab] = useState<'activity' | 'details'>(showActivity ? 'activity' : 'details');
   const [newDeal, setNewDeal] = useState(false);
-  const save = useFieldSaver(`/contacts/${id}`);
+  const save = useFieldSaver(`/contacts/${id}`, canEdit);
 
   const { data: c, isLoading, error } = useQuery({ queryKey: ['contact', id], queryFn: () => api<Contact>(`/contacts/${id}`) });
   useTrackRecent(c ? { kind: 'contact', id: c.id, title: fullName(c), sub: c.company?.name, to: `/contacts/${c.id}` } : null);
@@ -84,9 +88,12 @@ export default function ContactDetailPage() {
                 </Button>
               </a>
             )}
-            <Button onClick={() => setNewDeal(true)}>
-              <Plus className="h-4 w-4" /> {t("Opportunité")}
-            </Button>
+            {can('deals.create') && (
+              <Button onClick={() => setNewDeal(true)}>
+                <Plus className="h-4 w-4" /> {t("Opportunité")}
+              </Button>
+            )}
+            {can('contacts.delete') && (
             <Button
               variant="danger"
               aria-label={t("Supprimer le contact")}
@@ -95,6 +102,7 @@ export default function ContactDetailPage() {
             >
               <Trash2 className="h-4 w-4" />
             </Button>
+            )}
           </>
         }
         highlights={[
@@ -121,6 +129,7 @@ export default function ContactDetailPage() {
         onChange={(s) => setStatus.mutate(s as ContactStatus)}
         onReopen={() => setStatus.mutate('LEAD')}
         pending={setStatus.isPending}
+        readOnly={!canEdit}
       />
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -129,13 +138,13 @@ export default function ContactDetailPage() {
             value={tab}
             onChange={setTab}
             tabs={[
-              { value: 'activity', label: t('Activité'), count: c.activities?.length ?? 0 },
+              ...(showActivity ? [{ value: 'activity' as const, label: t('Activité'), count: c.activities?.length ?? 0 }] : []),
               { value: 'details', label: t('Détails') },
             ]}
           />
-          {tab === 'activity' ? (
+          {tab === 'activity' && showActivity ? (
             <>
-              <ActivityComposer links={{ contactId: c.id, companyId: c.companyId }} />
+              {can('activities.create') && <ActivityComposer links={{ contactId: c.id, companyId: c.companyId }} />}
               <Timeline activities={c.activities ?? []} />
             </>
           ) : (
@@ -152,8 +161,9 @@ export default function ContactDetailPage() {
                   value={c.companyId}
                   valueLabel={c.company?.name}
                   onChange={async (companyId) => {
+                    if (!canEdit) return;
                     try {
-                      await save('companyId')(companyId ?? '');
+                      await save('companyId')?.(companyId ?? '');
                     } catch (e) {
                       toast.error(e instanceof Error ? e.message : t('Erreur'));
                     }
@@ -175,7 +185,7 @@ export default function ContactDetailPage() {
                 value={c.ownerId ?? ''}
                 display={<Owner owner={c.owner} />}
                 options={[{ value: '', label: t('— Non attribué —') }, ...(users ?? []).filter((u) => u.active).map((u) => ({ value: u.id, label: u.name }))]}
-                onSave={save('ownerId')}
+                onSave={user?.scope === 'OWN' ? undefined : save('ownerId')}
               />
               <InlineField label={t("Créé le")} value={formatDate(c.createdAt)} readOnly />
               <InlineField label={t("Notes")} type="textarea" value={c.notes} onSave={save('notes')} className="sm:col-span-2" />
@@ -184,16 +194,18 @@ export default function ContactDetailPage() {
         </section>
 
         <div className="space-y-6">
+          {can('deals.view') && (
           <Card
             title={t('Opportunités ({n})', { n: c.deals?.length ?? 0 })}
             actions={
-              <Button size="sm" variant="ghost" onClick={() => setNewDeal(true)}>
+              can('deals.create') && <Button size="sm" variant="ghost" onClick={() => setNewDeal(true)}>
                 <Plus className="h-4 w-4" /> {t("Ajouter")}
               </Button>
             }
           >
             <DealRows deals={c.deals ?? []} />
           </Card>
+          )}
           <Card title={t('Devis & factures ({n})', { n: c.documents?.length ?? 0 })}>
             <DocumentRows documents={c.documents ?? []} />
           </Card>

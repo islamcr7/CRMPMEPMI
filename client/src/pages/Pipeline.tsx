@@ -24,7 +24,7 @@ const COLUMN_ACCENT: Record<DealStage, string> = {
 };
 
 export default function PipelinePage() {
-  const { user } = useAuth();
+  const { user, can } = useAuth();
   const money = useMoney();
   const qc = useQueryClient();
   const [q, setQ] = useState('');
@@ -88,9 +88,11 @@ export default function PipelinePage() {
         actions={
           <>
           <ExportButton entity="deals" />
-          <Button onClick={() => setCreatingIn('NEW')}>
-            <Plus className="h-4 w-4" /> {t("Nouvelle opportunité")}
-          </Button>
+          {can('deals.create') && (
+            <Button onClick={() => setCreatingIn('NEW')}>
+              <Plus className="h-4 w-4" /> {t("Nouvelle opportunité")}
+            </Button>
+          )}
           </>
         }
       />
@@ -138,21 +140,24 @@ export default function PipelinePage() {
                       </div>
                       <div className="text-xs tabular-nums text-slate-500">{money(sum)}</div>
                     </div>
+                    {can('deals.create') && (
                     <button onClick={() => setCreatingIn(col.value)} className="rounded p-1 text-slate-400 hover:bg-white hover:text-slate-700" aria-label={t('Ajouter dans {column}', { column: col.label })}>
                       <Plus className="h-4 w-4" />
                     </button>
+                    )}
                   </div>
                   <div className="flex min-h-24 flex-1 flex-col gap-2 px-2 pb-2">
                     {items.map((d) => (
                       <div
                         key={d.id}
-                        draggable
+                        draggable={can('deals.edit')}
                         onDragStart={(e) => e.dataTransfer.setData('text/plain', d.id)}
                         onClick={() => navigate(`/deals/${d.id}`)}
                         className="group cursor-pointer rounded-lg border border-slate-200 bg-white p-3 shadow-sm hover:border-indigo-300 active:cursor-grabbing"
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="text-sm font-medium text-slate-800">{d.title}</div>
+                          {can('deals.delete') && (
                           <button
                             onClick={async (e) => {
                               e.stopPropagation();
@@ -164,6 +169,7 @@ export default function PipelinePage() {
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
+                          )}
                         </div>
                         {d.company && (
                           <div className="mt-1 flex items-center gap-1 text-xs text-slate-500">

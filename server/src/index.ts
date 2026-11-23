@@ -7,7 +7,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { errorHandler } from './lib/http.js';
-import { requireAuth } from './middleware/auth.js';
+import { requireAuth, requireCrud, requirePerm } from './middleware/auth.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import companyRoutes from './routes/companies.js';
@@ -21,6 +21,7 @@ import searchRoutes from './routes/search.js';
 import productRoutes from './routes/products.js';
 import collectionRoutes from './routes/collections.js';
 import counterRoutes from './routes/counters.js';
+import roleRoutes from './routes/roles.js';
 import { exportRouter, importRouter } from './routes/csv.js';
 
 const app = express();
@@ -36,19 +37,20 @@ app.get('/api/health', (_req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', requireAuth, userRoutes);
-app.use('/api/companies', requireAuth, companyRoutes);
-app.use('/api/contacts', requireAuth, contactRoutes);
-app.use('/api/deals', requireAuth, dealRoutes);
-app.use('/api/activities', requireAuth, activityRoutes);
+app.use('/api/companies', requireAuth, requireCrud('companies'), companyRoutes);
+app.use('/api/contacts', requireAuth, requireCrud('contacts'), contactRoutes);
+app.use('/api/deals', requireAuth, requireCrud('deals'), dealRoutes);
+app.use('/api/activities', requireAuth, requireCrud('activities'), activityRoutes);
 app.use('/api/documents', requireAuth, documentRoutes);
 app.use('/api/settings', requireAuth, settingsRoutes);
 app.use('/api/dashboard', requireAuth, dashboardRoutes);
 app.use('/api/search', requireAuth, searchRoutes);
 app.use('/api/products', requireAuth, productRoutes);
-app.use('/api/collections', requireAuth, collectionRoutes);
+app.use('/api/collections', requireAuth, requirePerm('invoices.view'), collectionRoutes);
 app.use('/api/counters', requireAuth, counterRoutes);
-app.use('/api/export', requireAuth, exportRouter);
-app.use('/api/import', requireAuth, importRouter);
+app.use('/api/export', requireAuth, requirePerm('data.export'), exportRouter);
+app.use('/api/import', requireAuth, requirePerm('data.import'), importRouter);
+app.use('/api/roles', requireAuth, roleRoutes);
 
 app.use('/api', (_req, res) => {
   res.status(404).json({ error: 'Route inconnue' });

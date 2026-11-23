@@ -3,7 +3,8 @@ import { z } from 'zod';
 import type { ContactStatus, Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { notFound, optId, optStr, pagination, qs } from '../lib/http.js';
-import { assertCanDelete } from '../middleware/auth.js';
+import { assertAssignable, scope, type AuthUser } from '../middleware/auth.js';
+import { relatedIncludes } from '../lib/visibility.js';
 
 const router = Router();
 
@@ -30,20 +31,23 @@ router.get('/', async (req, res) => {
   const ownerId = qs(req, 'ownerId');
   const companyId = qs(req, 'companyId');
   const where: Prisma.ContactWhereInput = {
-    ...(status && (STATUSES as readonly string[]).includes(status) ? { status: status as ContactStatus } : {}),
-    ...(ownerId ? { ownerId } : {}),
-    ...(companyId ? { companyId } : {}),
-    ...(q
-      ? {
-          OR: [
-            { firstName: { contains: q, mode: 'insensitive' } },
-            { lastName: { contains: q, mode: 'insensitive' } },
-            { email: { contains: q, mode: 'insensitive' } },
-            { phone: { contains: q } },
-            { company: { name: { contains: q, mode: 'insensitive' } } },
-          ],
-        }
-      : {}),
+    AND: [
+      scope.contact(req.user!),
+      status && (STATUSES as readonly string[]).includes(status) ? { status: status as ContactStatus } : {},
+      ownerId ? { ownerId } : {},
+      companyId ? { companyId } : {},
+      q
+        ? {
+            OR: [
+              { firstName: { contains: q, mode: 'insensitive' } },
+              { lastName: { contains: q, mode: 'insensitive' } },
+              { email: { contains: q, mode: 'insensitive' } },
+              { phone: { contains: q } },
+              { company: { name: { contains: q, mode: 'insensitive' } } },
+            ],
+          }
+        : {},
+    ],
   };
   // Tri : ?sort=name|company|status|createdAt&dir=asc|desc
   const dir = qs(req, 'dir') === 'desc' ? 'desc' : 'asc';
@@ -68,33 +72,28 @@ router.get('/', async (req, res) => {
 });
 
 router.get('/:id', async (req, res) => {
-  const contact = await prisma.contact.findUnique({
-    where: { id: req.params.id },
+  const u = req.user!;
+  const contact = await prisma.contact.findFirst({
+    where: { id: String(req.params.id), ...scope.contact(u) },
     include: {
       owner,
       company: { select: { id: true, name: true } },
-      deals: {
-        orderBy: { createdAt: 'desc' },
-        include: {
-          owner,
-          company: { select: { id: true, name: true } },
-          contact: { select: { id: true, firstName: true, lastName: true } },
-        },
-      },
-      activities: {
-        orderBy: [{ done: 'asc' }, { dueDate: 'asc' }],
-        take: 50,
-        include: { assignee: owner },
-      },
-      documents: { orderBy: { issueDate: 'desc' }, take: 50 },
+      ...relatedIncludes(u),
     },
   });
   if (!contact) throw notFound('Contact');
   res.json(contact);
 });
 
+async function findScoped(id: string, u: AuthUser) {
+  const contact = await prisma.contact.findFirst({ where: { id, ...scope.contact(u) } });
+  if (!contact) throw notFound('Contact');
+  return contact;
+}
+
 router.post('/', async (req, res) => {
   const data = schema.parse(req.body);
+  assertAssignable(req.user!, data.ownerId);
   const contact = await prisma.contact.create({
     data: { ...data, ownerId: data.ownerId === undefined ? req.user!.id : data.ownerId },
   });
@@ -103,14 +102,14 @@ router.post('/', async (req, res) => {
 
 router.patch('/:id', async (req, res) => {
   const data = schema.partial().parse(req.body);
-  const contact = await prisma.contact.update({ where: { id: req.params.id }, data });
+  assertAssignable(req.user!, data.ownerId);
+  const current = await findScoped(String(req.params.id), req.user!);
+  const contact = await prisma.contact.update({ where: { id: current.id }, data });
   res.json(contact);
 });
 
 router.delete('/:id', async (req, res) => {
-  const contact = await prisma.contact.findUnique({ where: { id: req.params.id } });
-  if (!contact) throw notFound('Contact');
-  assertCanDelete(req.user!, contact.ownerId);
+  const contact = await findScoped(String(req.params.id), req.user!);
   await prisma.contact.delete({ where: { id: contact.id } });
   res.status(204).end();
 });

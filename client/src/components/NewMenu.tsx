@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Building2, CalendarPlus, ChevronDown, FilePlus, KanbanSquare, Plus, Receipt, UserPlus } from 'lucide-react';
 import { ActivityForm, CompanyForm, ContactForm, DealForm } from './forms';
+import { useAuth } from '../lib/auth';
 
 import { t } from '../lib/i18n';
 type FormKind = 'contact' | 'company' | 'deal' | 'activity';
@@ -25,14 +26,18 @@ export function NewMenu() {
     };
   }, [open]);
 
-  const items: { label: string; icon: typeof Plus; run: () => void }[] = [
-    { label: t('Contact'), icon: UserPlus, run: () => setForm('contact') },
-    { label: t('Entreprise'), icon: Building2, run: () => setForm('company') },
-    { label: t('Opportunité'), icon: KanbanSquare, run: () => setForm('deal') },
-    { label: t('Activité / tâche'), icon: CalendarPlus, run: () => setForm('activity') },
-    { label: t('Devis'), icon: FilePlus, run: () => navigate('/documents/new/QUOTE') },
-    { label: t('Facture'), icon: Receipt, run: () => navigate('/documents/new/INVOICE') },
-  ];
+  const { can } = useAuth();
+  const items = ([
+    { label: t('Contact'), icon: UserPlus, run: () => setForm('contact'), perm: 'contacts.create' },
+    { label: t('Entreprise'), icon: Building2, run: () => setForm('company'), perm: 'companies.create' },
+    { label: t('Opportunité'), icon: KanbanSquare, run: () => setForm('deal'), perm: 'deals.create' },
+    { label: t('Activité / tâche'), icon: CalendarPlus, run: () => setForm('activity'), perm: 'activities.create' },
+    { label: t('Devis'), icon: FilePlus, run: () => navigate('/documents/new/QUOTE'), perm: 'quotes.create' },
+    { label: t('Facture'), icon: Receipt, run: () => navigate('/documents/new/INVOICE'), perm: 'invoices.create' },
+  ] as { label: string; icon: typeof Plus; perm: string; run: () => void }[]).filter((i) => can(i.perm));
+
+  // Rôle en lecture seule : pas de bouton « Nouveau »
+  if (items.length === 0) return null;
 
   return (
     <div ref={ref} className="relative">

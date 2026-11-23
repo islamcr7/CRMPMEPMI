@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { optStr, qs } from '../lib/http.js';
-import { requireRole } from '../middleware/auth.js';
+import { requirePerm } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -18,7 +18,7 @@ const schema = z.object({
 });
 
 /** ?q=…&active=true|false|all (défaut : true) */
-router.get('/', async (req, res) => {
+router.get('/', requirePerm('products.view'), async (req, res) => {
   const q = qs(req, 'q');
   const active = qs(req, 'active') ?? 'true';
   const where: Prisma.ProductWhereInput = {
@@ -37,18 +37,18 @@ router.get('/', async (req, res) => {
   res.json(products);
 });
 
-router.post('/', async (req, res) => {
+router.post('/', requirePerm('products.manage'), async (req, res) => {
   const product = await prisma.product.create({ data: schema.parse(req.body) });
   res.status(201).json(product);
 });
 
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', requirePerm('products.manage'), async (req, res) => {
   const product = await prisma.product.update({ where: { id: String(req.params.id) }, data: schema.partial().parse(req.body) });
   res.json(product);
 });
 
 // Les lignes de documents copient les valeurs : supprimer un produit n'altère aucun devis/facture.
-router.delete('/:id', requireRole('ADMIN'), async (req, res) => {
+router.delete('/:id', requirePerm('products.manage'), async (req, res) => {
   await prisma.product.delete({ where: { id: String(req.params.id) } });
   res.status(204).end();
 });

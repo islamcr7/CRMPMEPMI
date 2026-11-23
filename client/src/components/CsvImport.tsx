@@ -6,6 +6,7 @@ import { normalizeHeader, parseCsv, readCsvFile } from '../lib/csv';
 import { Button, ErrorBox, Modal } from './ui';
 
 import { t } from '../lib/i18n';
+import { useAuth } from '../lib/auth';
 export type ImportEntity = 'contacts' | 'companies' | 'products';
 
 interface FieldDef {
@@ -255,6 +256,9 @@ export function CsvImport({ entity, onClose }: { entity: ImportEntity; onClose: 
 
 /** Lien de téléchargement CSV (cookie de session envoyé automatiquement, même origine). */
 export function ExportButton({ entity, label = t('Exporter') }: { entity: 'contacts' | 'companies' | 'deals' | 'invoices' | 'products'; label?: string }) {
+  const { can } = useAuth();
+  // Masqué sans le droit d'export
+  if (!can('data.export')) return null;
   return (
     <a
       href={`/api/export/${entity}`}

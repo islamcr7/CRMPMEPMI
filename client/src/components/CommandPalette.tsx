@@ -17,6 +17,7 @@ import {
   Receipt,
   Search,
   Settings,
+  ShieldCheck,
   Sun,
   UserPlus,
   Users,
@@ -36,6 +37,8 @@ interface Command {
   sub?: string;
   hint?: string;
   keywords?: string;
+  /** Droit requis pour proposer cette commande */
+  perm?: string;
   run: () => void;
 }
 
@@ -48,7 +51,7 @@ const norm = (s: string) =>
 /** Palette de commandes (Ctrl+K / ⌘K) : actions rapides, navigation et recherche. */
 export function CommandPalette({ open, onClose, setTheme }: { open: boolean; onClose: () => void; setTheme: (t: ThemePref) => void }) {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, can } = useAuth();
   const [q, setQ] = useState('');
   const [active, setActive] = useState(0);
   const [form, setForm] = useState<'contact' | 'company' | 'deal' | 'activity' | null>(null);
@@ -69,42 +72,39 @@ export function CommandPalette({ open, onClose, setTheme }: { open: boolean; onC
 
   const actions: Command[] = useMemo(
     () => [
-      { key: 'a-contact', icon: UserPlus, title: t('Nouveau contact'), keywords: t('creer ajouter personne'), run: () => setForm('contact') },
-      { key: 'a-company', icon: Building2, title: t('Nouvelle entreprise'), keywords: t('creer ajouter societe client'), run: () => setForm('company') },
-      { key: 'a-deal', icon: KanbanSquare, title: t('Nouvelle opportunité'), keywords: t('creer affaire vente deal'), run: () => setForm('deal') },
-      { key: 'a-activity', icon: CalendarPlus, title: t('Nouvelle activité'), keywords: t('creer tache appel rendez-vous rdv relance'), run: () => setForm('activity') },
-      { key: 'a-quote', icon: FilePlus, title: t('Nouveau devis'), keywords: t('creer proposition'), run: go('/documents/new/QUOTE') },
-      { key: 'a-invoice', icon: Receipt, title: t('Nouvelle facture'), keywords: t('creer facturer'), run: go('/documents/new/INVOICE') },
-    ],
+      { key: 'a-contact', icon: UserPlus, title: t('Nouveau contact'), keywords: t('creer ajouter personne'), run: () => setForm('contact'), perm: 'contacts.create' },
+      { key: 'a-company', icon: Building2, title: t('Nouvelle entreprise'), keywords: t('creer ajouter societe client'), run: () => setForm('company'), perm: 'companies.create' },
+      { key: 'a-deal', icon: KanbanSquare, title: t('Nouvelle opportunité'), keywords: t('creer affaire vente deal'), run: () => setForm('deal'), perm: 'deals.create' },
+      { key: 'a-activity', icon: CalendarPlus, title: t('Nouvelle activité'), keywords: t('creer tache appel rendez-vous rdv relance'), run: () => setForm('activity'), perm: 'activities.create' },
+      { key: 'a-quote', icon: FilePlus, title: t('Nouveau devis'), keywords: t('creer proposition'), run: go('/documents/new/QUOTE'), perm: 'quotes.create' },
+      { key: 'a-invoice', icon: Receipt, title: t('Nouvelle facture'), keywords: t('creer facturer'), run: go('/documents/new/INVOICE'), perm: 'invoices.create' },
+    ].filter((c) => !c.perm || can(c.perm)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+    [user?.permissions],
   );
 
   const pages: Command[] = useMemo(
     () => [
       { key: 'p-home', icon: LayoutDashboard, title: t('Tableau de bord'), keywords: t('accueil dashboard'), run: go('/') },
-      { key: 'p-companies', icon: Building2, title: t('Entreprises'), run: go('/companies') },
-      { key: 'p-contacts', icon: Users, title: t('Contacts'), run: go('/contacts') },
-      { key: 'p-pipeline', icon: KanbanSquare, title: t('Pipeline'), keywords: t('opportunites kanban'), run: go('/pipeline') },
-      { key: 'p-activities', icon: CheckSquare, title: t('Activités'), keywords: t('taches agenda'), run: go('/activities') },
-      { key: 'p-quotes', icon: FileText, title: t('Devis'), run: go('/documents/quotes') },
-      { key: 'p-invoices', icon: Receipt, title: t('Factures & avoirs'), run: go('/documents/invoices') },
-      { key: 'p-collections', icon: Wallet, title: t('Recouvrement'), keywords: t('impayes relances retard'), run: go('/collections') },
-      { key: 'p-products', icon: Package, title: t('Produits & services'), keywords: t('catalogue'), run: go('/products') },
-      ...(user?.role === 'ADMIN'
-        ? [
-            { key: 'p-users', icon: Users, title: t('Utilisateurs'), keywords: t('equipe admin'), run: go('/users') },
-            { key: 'p-settings', icon: Settings, title: t('Paramètres'), keywords: t('entreprise tva devise'), run: go('/settings') },
-          ]
-        : []),
+      { key: 'p-companies', icon: Building2, title: t('Entreprises'), run: go('/companies'), perm: 'companies.view' },
+      { key: 'p-contacts', icon: Users, title: t('Contacts'), run: go('/contacts'), perm: 'contacts.view' },
+      { key: 'p-pipeline', icon: KanbanSquare, title: t('Pipeline'), keywords: t('opportunites kanban'), run: go('/pipeline'), perm: 'deals.view' },
+      { key: 'p-activities', icon: CheckSquare, title: t('Activités'), keywords: t('taches agenda'), run: go('/activities'), perm: 'activities.view' },
+      { key: 'p-quotes', icon: FileText, title: t('Devis'), run: go('/documents/quotes'), perm: 'quotes.view' },
+      { key: 'p-invoices', icon: Receipt, title: t('Factures & avoirs'), run: go('/documents/invoices'), perm: 'invoices.view' },
+      { key: 'p-collections', icon: Wallet, title: t('Recouvrement'), keywords: t('impayes relances retard'), run: go('/collections'), perm: 'invoices.view' },
+      { key: 'p-products', icon: Package, title: t('Produits & services'), keywords: t('catalogue'), run: go('/products'), perm: 'products.view' },
+      { key: 'p-users', icon: Users, title: t('Utilisateurs'), keywords: t('equipe admin'), run: go('/users'), perm: 'admin.users' },
+      { key: 'p-roles', icon: ShieldCheck, title: t('Rôles & droits'), keywords: t('permissions acces securite'), run: go('/roles'), perm: 'admin.roles' },
+      { key: 'p-settings', icon: Settings, title: t('Paramètres'), keywords: t('entreprise tva devise'), run: go('/settings'), perm: 'admin.settings' },
       { key: 't-dark', icon: Moon, title: t('Passer en thème sombre'), keywords: t('mode nuit dark'), run: () => setTheme('dark') },
       { key: 't-light', icon: Sun, title: t('Passer en thème clair'), keywords: t('mode jour light'), run: () => setTheme('light') },
       getLang() === 'fr'
         ? { key: 'l-en', icon: Languages, title: 'Switch to English', keywords: 'langue language anglais english', run: () => setLang('en') }
         : { key: 'l-fr', icon: Languages, title: 'Passer en français', keywords: 'langue language french francais', run: () => setLang('fr') },
-    ],
+    ].filter((c: Command) => !c.perm || can(c.perm)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [user?.role],
+    [user?.permissions],
   );
 
   const sections = useMemo(() => {

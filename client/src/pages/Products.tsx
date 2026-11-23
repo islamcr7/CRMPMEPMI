@@ -65,7 +65,8 @@ function ProductForm({ product, onClose }: { product?: Product; onClose: () => v
 export default function ProductsPage() {
   const money = useMoney();
   const qc = useQueryClient();
-  const { user } = useAuth();
+  const { can } = useAuth();
+  const canManage = can('products.manage');
   const [q, setQ] = useState('');
   const [active, setActive] = useState('true');
   const [editing, setEditing] = useState<Product | 'new' | null>(null);
@@ -91,13 +92,17 @@ export default function ProductsPage() {
         subtitle={t("Catalogue réutilisable dans les devis et factures")}
         actions={
           <>
-            <Button variant="secondary" onClick={() => setImporting(true)}>
-              <Upload className="h-4 w-4" /> {t("Importer")}
-            </Button>
+            {canManage && can('data.import') && (
+              <Button variant="secondary" onClick={() => setImporting(true)}>
+                <Upload className="h-4 w-4" /> {t("Importer")}
+              </Button>
+            )}
             <ExportButton entity="products" />
-            <Button onClick={() => setEditing('new')}>
-              <Plus className="h-4 w-4" /> {t("Nouveau produit")}
-            </Button>
+            {canManage && (
+              <Button onClick={() => setEditing('new')}>
+                <Plus className="h-4 w-4" /> {t("Nouveau produit")}
+              </Button>
+            )}
           </>
         }
       />
@@ -143,10 +148,12 @@ export default function ProductsPage() {
                     </td>
                     <td className="hidden px-4 py-3 text-right tabular-nums text-slate-600 sm:table-cell">{Number(p.taxRate)} %</td>
                     <td className="whitespace-nowrap px-4 py-3 text-right">
+                      {canManage && (
                       <button onClick={() => setEditing(p)} className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label={t("Modifier")}>
                         <Pencil className="h-4 w-4" />
                       </button>
-                      {user?.role === 'ADMIN' && (
+                      )}
+                      {canManage && (
                         <button
                           onClick={async () =>
                             (await confirmDialog({ title: t('Supprimer « {name} » ?', { name: p.name }), message: t('Les devis et factures existants ne sont pas modifiés. Pour le masquer sans le supprimer, archivez-le.'), confirmLabel: t('Supprimer'), danger: true })) &&

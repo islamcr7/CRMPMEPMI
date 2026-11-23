@@ -14,7 +14,7 @@ import { ContactForm } from '../components/forms';
 
 import { t } from '../lib/i18n';
 export default function ContactsPage() {
-  const { user } = useAuth();
+  const { user, can } = useAuth();
   const navigate = useNavigate();
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('');
@@ -39,13 +39,17 @@ export default function ContactsPage() {
         subtitle={data ? t('{n} contact(s)', { n: data.total }) : undefined}
         actions={
           <>
-            <Button variant="secondary" onClick={() => setImporting(true)}>
-              <Upload className="h-4 w-4" /> {t("Importer")}
-            </Button>
+            {can('data.import') && can('contacts.create') && (
+              <Button variant="secondary" onClick={() => setImporting(true)}>
+                <Upload className="h-4 w-4" /> {t("Importer")}
+              </Button>
+            )}
             <ExportButton entity="contacts" />
+            {can('contacts.create') && (
             <Button onClick={() => setCreating(true)}>
               <Plus className="h-4 w-4" /> {t("Nouveau contact")}
             </Button>
+            )}
           </>
         }
       />

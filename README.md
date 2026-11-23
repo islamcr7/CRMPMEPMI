@@ -42,6 +42,12 @@ Comptes de démonstration (mots de passe dans `server/.env`) :
   - Formats acceptés : exports Excel FR (Windows-1252, séparateur `;`), Google Sheets et autres CRM.
   - Les doublons sont ignorés : contacts par email, entreprises par nom, produits par nom ou référence. Les entreprises inconnues sont créées automatiquement.
   - Export de toutes les listes (contacts, entreprises, opportunités, factures et avoirs, produits) : fichier CSV qui s'ouvre directement dans Excel.
+- **Rôles & droits** (Administration → Rôles & droits) : rôles personnalisables.
+  - Chaque rôle a une grille de droits par module : voir, créer, modifier, supprimer, plus des droits spécifiques (encaisser et relancer, émettre des avoirs, import, export, administration).
+  - Chaque rôle a aussi une **visibilité** : toutes les fiches, ou seulement celles dont l'utilisateur est responsable. Les devis et factures de ses clients restent visibles.
+  - Cinq rôles sont livrés : Administrateur, Manager, Commercial (ses fiches), Comptable, Lecture seule.
+  - Le serveur contrôle chaque action ; l'interface masque ce qui n'est pas autorisé. Un changement de droits s'applique immédiatement.
+  - Garde-fous : le rôle Administrateur ne peut être ni supprimé ni privé de la gestion des utilisateurs et des rôles, et il reste toujours au moins un administrateur actif.
 - **Utilisateurs & rôles** : *Administrateur* (gestion des utilisateurs et des paramètres, suppression de toute fiche) et *Commercial* (accès à toutes les fiches, suppression uniquement des siennes).
 - **Paramètres** : identité de l'entreprise (en-tête des documents), devise (EUR, DZD, MAD, TND, XOF…), TVA par défaut, délai de paiement, RIB, pied de page.
 

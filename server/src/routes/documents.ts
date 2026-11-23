@@ -4,7 +4,18 @@ import { z } from 'zod';
 import type { DocumentStatus, DocumentType, Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { HttpError, notFound, optDate, optId, optStr, pagination, qs } from '../lib/http.js';
-import { assertCanDelete } from '../middleware/auth.js';
+import { assertPerm, type AuthUser } from '../middleware/auth.js';
+import { documentWhere } from '../lib/visibility.js';
+
+/** Module de droits d'un type de document (un avoir relève des factures). */
+const mod = (type: DocumentType) => (type === 'QUOTE' ? 'quotes' : 'invoices');
+
+/** Document visible par l'utilisateur (droits de lecture + portée), sinon 404. */
+async function findVisible(id: string, u: AuthUser) {
+  const doc = await prisma.document.findFirst({ where: { id, ...documentWhere(u) } });
+  if (!doc) throw notFound('Document');
+  return doc;
+}
 
 const router = Router();
 
@@ -102,6 +113,7 @@ router.get('/', async (req, res) => {
   const status = qs(req, 'status');
   const q = qs(req, 'q');
   const where: Prisma.DocumentWhereInput = {
+    AND: [documentWhere(req.user!)],
     ...(types.length ? { type: { in: types } } : {}),
     ...(status === 'OVERDUE'
       ? { type: 'INVOICE', status: 'SENT', dueDate: { lt: new Date() } }
@@ -126,13 +138,14 @@ router.get('/', async (req, res) => {
 });
 
 router.get('/:id', async (req, res) => {
-  const doc = await prisma.document.findUnique({ where: { id: req.params.id }, include: fullInclude });
+  const doc = await prisma.document.findFirst({ where: { id: String(req.params.id), ...documentWhere(req.user!) }, include: fullInclude });
   if (!doc) throw notFound('Document');
   res.json(doc);
 });
 
 router.post('/', async (req, res) => {
   const data = createSchema.parse(req.body);
+  assertPerm(req.user!, `${mod(data.type)}.create`);
   const issueDate = data.issueDate ?? new Date();
   const dueDate = data.dueDate === undefined || data.dueDate === null ? await defaultDueDate(data.type, issueDate) : data.dueDate;
   const doc = await prisma.$transaction(async (tx) =>
@@ -158,10 +171,11 @@ router.post('/', async (req, res) => {
 
 router.patch('/:id', async (req, res) => {
   const data = updateSchema.parse(req.body);
-  const current = await prisma.document.findUnique({ where: { id: req.params.id } });
-  if (!current) throw notFound('Document');
+  const current = await findVisible(String(req.params.id), req.user!);
 
   const { status, lines, ...fields } = data;
+  // Solder une facture relève de l'encaissement ; le reste (contenu, émission, refus…) de la modification
+  assertPerm(req.user!, status === 'PAID' ? 'invoices.payments' : `${mod(current.type)}.edit`);
   const editsContent = lines !== undefined || Object.values(fields).some((v) => v !== undefined);
   if (editsContent && current.status !== 'DRAFT') {
     throw new HttpError(409, 'Seuls les brouillons sont modifiables. Annulez et recréez le document si nécessaire.');
@@ -230,8 +244,8 @@ async function syncPaid(tx: Prisma.TransactionClient, documentId: string) {
 
 router.post('/:id/payments', async (req, res) => {
   const data = paymentSchema.parse(req.body);
-  const doc = await prisma.document.findUnique({ where: { id: String(req.params.id) } });
-  if (!doc) throw notFound('Facture');
+  assertPerm(req.user!, 'invoices.payments');
+  const doc = await findVisible(String(req.params.id), req.user!);
   if (doc.type !== 'INVOICE') throw new HttpError(400, 'Les paiements ne concernent que les factures');
   if (doc.status !== 'SENT') throw new HttpError(409, doc.status === 'PAID' ? 'Cette facture est déjà soldée' : 'La facture doit être émise pour recevoir un paiement');
   const remaining = round2(Number(doc.total) - Number(doc.amountPaid));
@@ -257,9 +271,10 @@ router.post('/:id/payments', async (req, res) => {
 
 router.delete('/:id/payments/:paymentId', async (req, res) => {
   const payment = await prisma.payment.findUnique({ where: { id: String(req.params.paymentId) }, include: { document: true } });
+  assertPerm(req.user!, 'invoices.payments');
+  await findVisible(String(req.params.id), req.user!);
   if (!payment || payment.documentId !== req.params.id) throw notFound('Paiement');
   if (payment.document.status === 'CANCELLED') throw new HttpError(409, 'Facture annulée : paiement non modifiable');
-  assertCanDelete(req.user!, payment.createdById);
   const updated = await prisma.$transaction(async (tx) => {
     await tx.payment.delete({ where: { id: payment.id } });
     return syncPaid(tx, payment.documentId);
@@ -271,6 +286,8 @@ router.delete('/:id/payments/:paymentId', async (req, res) => {
 
 /** Annule une facture émise par un avoir du même montant (AV-AAAA-NNNN). */
 router.post('/:id/credit-note', async (req, res) => {
+  assertPerm(req.user!, 'invoices.credit');
+  await findVisible(String(req.params.id), req.user!);
   const invoice = await prisma.document.findUnique({ where: { id: String(req.params.id) }, include: { lines: true, derived: true } });
   if (!invoice) throw notFound('Facture');
   if (invoice.type !== 'INVOICE') throw new HttpError(400, 'Un avoir ne peut être créé que depuis une facture');
@@ -308,6 +325,8 @@ router.post('/:id/credit-note', async (req, res) => {
 
 /** Enregistre une relance (compteur + activité dans l'historique) et renvoie un brouillon d'email. */
 router.post('/:id/reminders', async (req, res) => {
+  assertPerm(req.user!, 'invoices.payments');
+  await findVisible(String(req.params.id), req.user!);
   const invoice = await prisma.document.findUnique({ where: { id: String(req.params.id) }, include: { company: true, contact: true } });
   if (!invoice) throw notFound('Facture');
   if (invoice.type !== 'INVOICE' || invoice.status !== 'SENT') throw new HttpError(409, 'Seule une facture émise non soldée peut être relancée');
@@ -358,7 +377,9 @@ router.post('/:id/reminders', async (req, res) => {
 
 /** Transforme un devis en facture (brouillon) et marque le devis comme accepté. */
 router.post('/:id/convert', async (req, res) => {
-  const quote = await prisma.document.findUnique({ where: { id: req.params.id }, include: { lines: true, derived: true } });
+  assertPerm(req.user!, 'quotes.edit', 'invoices.create');
+  await findVisible(String(req.params.id), req.user!);
+  const quote = await prisma.document.findUnique({ where: { id: String(req.params.id) }, include: { lines: true, derived: true } });
   if (!quote) throw notFound('Devis');
   if (quote.type !== 'QUOTE') throw new HttpError(400, 'Seul un devis peut être transformé en facture');
   if (['REFUSED', 'CANCELLED'].includes(quote.status)) throw new HttpError(409, 'Ce devis est refusé ou annulé');
@@ -406,10 +427,9 @@ router.post('/:id/convert', async (req, res) => {
 });
 
 router.delete('/:id', async (req, res) => {
-  const doc = await prisma.document.findUnique({ where: { id: req.params.id } });
-  if (!doc) throw notFound('Document');
+  const doc = await findVisible(String(req.params.id), req.user!);
+  assertPerm(req.user!, `${mod(doc.type)}.delete`);
   if (doc.status !== 'DRAFT') throw new HttpError(409, 'Seuls les brouillons peuvent être supprimés. Utilisez « Annuler ».');
-  assertCanDelete(req.user!, doc.ownerId);
   await prisma.document.delete({ where: { id: doc.id } });
   res.status(204).end();
 });

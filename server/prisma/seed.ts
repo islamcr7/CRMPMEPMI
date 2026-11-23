@@ -40,13 +40,13 @@ async function main() {
   });
 
   const admin = await prisma.user.create({
-    data: { email: adminEmail, name: 'Administrateur', role: 'ADMIN', passwordHash: await bcrypt.hash(adminPassword, 10) },
+    data: { email: adminEmail, name: 'Administrateur', roleId: 'role_admin', passwordHash: await bcrypt.hash(adminPassword, 10) },
   });
   const sales = await prisma.user.create({
     data: {
       email: 'commercial@crm.local',
       name: 'Sophie Martin',
-      role: 'SALES',
+      roleId: 'role_sales',
       passwordHash: await bcrypt.hash(salesPassword, 10),
     },
   });

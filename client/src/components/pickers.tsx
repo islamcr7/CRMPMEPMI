@@ -7,6 +7,7 @@ import type { Company, Contact, Deal, Paginated, User } from '../types';
 import { Field, Select, useDebounce } from './ui';
 
 import { t } from '../lib/i18n';
+import { useAuth } from '../lib/auth';
 type Kind = 'company' | 'contact' | 'deal';
 interface Option {
   id: string;
@@ -124,11 +125,14 @@ export function useUsers() {
 
 export function UserSelect({ label = t('Responsable'), value, onChange, allowEmpty = true }: { label?: string; value: string | null; onChange: (id: string | null) => void; allowEmpty?: boolean }) {
   const { data } = useUsers();
+  const { user } = useAuth();
+  // Portée « ses fiches » : on ne peut s'attribuer une fiche qu'à soi-même
+  const ownOnly = user?.scope === 'OWN';
   return (
-    <Select label={label} value={value ?? ''} onChange={(e) => onChange(e.target.value || null)}>
-      {allowEmpty && <option value="">{t("— Non attribué —")}</option>}
+    <Select label={label} value={value ?? ''} onChange={(e) => onChange(e.target.value || null)} disabled={ownOnly && value === user?.id}>
+      {allowEmpty && !ownOnly && <option value="">{t("— Non attribué —")}</option>}
       {data
-        ?.filter((u) => u.active || u.id === value)
+        ?.filter((u) => (ownOnly ? u.id === user?.id || u.id === value : u.active || u.id === value))
         .map((u) => (
           <option key={u.id} value={u.id}>
             {u.name}

@@ -14,6 +14,7 @@ import {
   Package,
   Receipt,
   Settings,
+  ShieldCheck,
   UserCog,
   Users,
   Wallet,
@@ -24,7 +25,7 @@ import { useSettings } from '../lib/format';
 import { useRecent, type RecentItem } from '../lib/recent';
 import { Avatar } from './ui';
 
-import { t } from '../lib/i18n';
+import { t, tMaybe } from '../lib/i18n';
 interface Counters {
   myOverdue: number;
   myToday: number;
@@ -38,13 +39,14 @@ interface Item {
   to: string;
   label: string;
   icon: typeof Users;
+  /** Droit requis pour voir ce lien */
+  perm: string;
   badge?: (c: Counters) => { value: number; tone: BadgeTone; title: string } | null;
 }
 interface Group {
   key: string;
   label: string;
   items: Item[];
-  admin?: boolean;
 }
 
 const GROUPS: Group[] = [
@@ -52,18 +54,20 @@ const GROUPS: Group[] = [
     key: 'sales',
     label: t('Ventes'),
     items: [
-      { to: '/companies', label: t('Entreprises'), icon: Building2 },
-      { to: '/contacts', label: t('Contacts'), icon: Users },
+      { to: '/companies', label: t('Entreprises'), icon: Building2, perm: 'companies.view' },
+      { to: '/contacts', label: t('Contacts'), icon: Users, perm: 'contacts.view' },
       {
         to: '/pipeline',
         label: t('Pipeline'),
         icon: KanbanSquare,
+        perm: 'deals.view',
         badge: (c) => (c.openDeals ? { value: c.openDeals, tone: 'neutral', title: t('{n} opportunité(s) en cours', { n: c.openDeals }) } : null),
       },
       {
         to: '/activities',
         label: t('Activités'),
         icon: CheckSquare,
+        perm: 'activities.view',
         badge: (c) =>
           c.myOverdue
             ? { value: c.myOverdue, tone: 'alert', title: t('{n} tâche(s) en retard', { n: c.myOverdue }) }
@@ -81,25 +85,27 @@ const GROUPS: Group[] = [
         to: '/documents/quotes',
         label: t('Devis'),
         icon: FileText,
+        perm: 'quotes.view',
         badge: (c) => (c.quotesPending ? { value: c.quotesPending, tone: 'neutral', title: t('{n} devis en attente de réponse', { n: c.quotesPending }) } : null),
       },
-      { to: '/documents/invoices', label: t('Factures'), icon: Receipt },
+      { to: '/documents/invoices', label: t('Factures'), icon: Receipt, perm: 'invoices.view' },
       {
         to: '/collections',
         label: t('Recouvrement'),
         icon: Wallet,
+        perm: 'invoices.view',
         badge: (c) => (c.invoicesOverdue ? { value: c.invoicesOverdue, tone: 'alert', title: t('{n} facture(s) en retard de paiement', { n: c.invoicesOverdue }) } : null),
       },
-      { to: '/products', label: t('Produits'), icon: Package },
+      { to: '/products', label: t('Produits'), icon: Package, perm: 'products.view' },
     ],
   },
   {
     key: 'admin',
     label: t('Administration'),
-    admin: true,
     items: [
-      { to: '/users', label: t('Utilisateurs'), icon: UserCog },
-      { to: '/settings', label: t('Paramètres'), icon: Settings },
+      { to: '/users', label: t('Utilisateurs'), icon: UserCog, perm: 'admin.users' },
+      { to: '/roles', label: t('Rôles & droits'), icon: ShieldCheck, perm: 'admin.roles' },
+      { to: '/settings', label: t('Paramètres'), icon: Settings, perm: 'admin.settings' },
     ],
   },
 ];
@@ -137,7 +143,7 @@ function Badge({ value, tone, title, mini }: { value: number; tone: BadgeTone; t
  * `compact` : version réduite (icônes seules, info-bulles au survol).
  */
 export function Sidebar({ onLogout, compact = false, onToggleCompact }: { onLogout: () => void; compact?: boolean; onToggleCompact?: () => void }) {
-  const { user } = useAuth();
+  const { user, can } = useAuth();
   const { data: org } = useSettings();
   const recent = useRecent();
   const location = useLocation();
@@ -161,7 +167,8 @@ export function Sidebar({ onLogout, compact = false, onToggleCompact }: { onLogo
     });
 
   const isActive = (to: string) => location.pathname === to || location.pathname.startsWith(`${to}/`);
-  const groups = GROUPS.filter((g) => !g.admin || user?.role === 'ADMIN');
+  // Liens filtrés selon les droits du rôle ; une rubrique vide disparaît
+  const groups = GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => can(i.perm)) })).filter((g) => g.items.length > 0);
 
   const linkCls = ({ isActive: active }: { isActive: boolean }) =>
     `relative flex items-center rounded-lg text-sm font-medium transition-colors ${compact ? 'h-10 w-10 justify-center' : 'gap-3 px-3 py-2'} ${
@@ -281,7 +288,7 @@ export function Sidebar({ onLogout, compact = false, onToggleCompact }: { onLogo
         {compact ? (
           <>
             {user && (
-              <span title={`${user.name} — ${user.role === 'ADMIN' ? t('Administrateur') : t('Commercial')}`}>
+              <span title={`${user.name} — ${tMaybe(user.roleName)}`}>
                 <Avatar name={user.name} />
               </span>
             )}
@@ -294,7 +301,7 @@ export function Sidebar({ onLogout, compact = false, onToggleCompact }: { onLogo
             {user && <Avatar name={user.name} />}
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-medium text-slate-800">{user?.name}</div>
-              <div className="truncate text-xs text-slate-500">{user?.role === 'ADMIN' ? t('Administrateur') : t('Commercial')}</div>
+              <div className="truncate text-xs text-slate-500">{user?.roleName && tMaybe(user.roleName)}</div>
             </div>
             <button onClick={onLogout} className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700" title={t("Se déconnecter")} aria-label={t("Se déconnecter")}>
               <LogOut className="h-4 w-4" />

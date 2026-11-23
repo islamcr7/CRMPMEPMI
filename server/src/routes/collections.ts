@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
+import { dataFilters } from '../lib/visibility.js';
 
 const router = Router();
 
@@ -10,9 +11,9 @@ const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
  * Recouvrement : factures émises non soldées, avec retard, reste dû et relances.
  * Balance âgée : non échu, 1–30, 31–60, 61–90, > 90 jours.
  */
-router.get('/', async (_req, res) => {
+router.get('/', async (req, res) => {
   const invoices = await prisma.document.findMany({
-    where: { type: 'INVOICE', status: 'SENT' },
+    where: { AND: [dataFilters(req.user!).invoice, { status: 'SENT' }] },
     orderBy: { dueDate: 'asc' },
     include: {
       company: { select: { id: true, name: true, email: true, phone: true } },

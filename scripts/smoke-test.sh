@@ -78,7 +78,37 @@ check "apparaît en retard" "$(curl -s -b $TMP/a "$B/activities?range=overdue&q=
 
 echo "Droits"
 check "commercial ne modifie pas les paramètres -> 403" "$(code -b $TMP/s -X PUT $B/settings -H "$J" -d '{}')" 403
-check "commercial ne supprime pas la fiche d'un autre -> 403" "$(code -b $TMP/s -X DELETE $B/deals/$DEAL)" 403
+check "commercial (ses fiches) ne voit pas la fiche d'un autre -> 404" "$(code -b $TMP/s -X DELETE $B/deals/$DEAL)" 404
 check "entreprise avec factures non supprimable -> 409" "$(code -b $TMP/a -X DELETE $B/companies/$CO)" 409
+
+echo "Rôles & visibilité"
+check "5 rôles livrés par défaut" "$(curl -s -b $TMP/a $B/roles | pick 'd=>d.length')" 5
+check "commercial : portée « ses fiches » dans /auth/me" "$(curl -s -b $TMP/s $B/auth/me | pick 'd=>d.roleName+":"+d.scope')" "Commercial:OWN"
+ADMIN_CONTACTS=$(curl -s -b $TMP/a "$B/contacts?pageSize=100" | pick 'd=>d.total')
+SALES_ME=$(curl -s -b $TMP/s $B/auth/me | pick 'd=>d.id')
+check "commercial ne liste que ses contacts" "$(curl -s -b $TMP/s "$B/contacts?pageSize=100" | pick "d=>d.items.every(c=>c.owner?.id==='$SALES_ME') && d.total<$ADMIN_CONTACTS")" true
+check "commercial : fiche entreprise d'un autre -> 404" "$(code -b $TMP/s $B/companies/$CO)" 404
+check "commercial ne s'attribue pas la fiche d'un autre -> 403" "$(code -b $TMP/s -X POST $B/companies -H "$J" -d "{\"name\":\"Hors portée\",\"ownerId\":\"$(curl -s -b $TMP/a $B/auth/me | pick 'd=>d.id')\"}")" 403
+check "commercial ne voit pas les rôles -> 403" "$(code -b $TMP/s $B/roles)" 403
+check "commercial ne crée pas d'avoir -> 403" "$(code -b $TMP/s -X POST $B/documents/$INV/credit-note)" 403
+RO=$(curl -s -b $TMP/a -X POST $B/roles -H "$J" -d '{"name":"Test lecture contacts","scope":"ALL","permissions":["contacts.view","inconnu.droit"]}' | pick 'd=>d.id+":"+d.permissions.join(",")')
+check "rôle personnalisé créé (droit inconnu ignoré)" "${RO#*:}" "contacts.view"
+RO_ID=${RO%%:*}
+TPW="Test-$(node -e "console.log(require('crypto').randomBytes(6).toString('hex'))")"
+check "utilisateur créé avec ce rôle" "$(code -b $TMP/a -X POST $B/users -H "$J" -d "{\"name\":\"Lecteur\",\"email\":\"lecteur.$RANDOM@example.com\",\"roleId\":\"$RO_ID\",\"password\":\"$TPW\"}")" 201
+LECT_EMAIL=$(curl -s -b $TMP/a $B/users | pick "d=>d.find(u=>u.roleId==='$RO_ID').email")
+curl -s -c $TMP/r -X POST $B/auth/login -H "$J" -d "{\"email\":\"$LECT_EMAIL\",\"password\":\"$TPW\"}" >/dev/null
+check "rôle lecture : voit les contacts" "$(code -b $TMP/r $B/contacts)" 200
+check "rôle lecture : ne crée pas de contact -> 403" "$(code -b $TMP/r -X POST $B/contacts -H "$J" -d '{"firstName":"A","lastName":"B"}')" 403
+check "rôle lecture : pas d'accès aux entreprises -> 403" "$(code -b $TMP/r $B/companies)" 403
+check "rôle lecture : tableau de bord sans factures" "$(curl -s -b $TMP/r $B/dashboard | pick 'd=>d.invoices.unpaidTotal+":"+d.pipeline.openCount')" "0:0"
+check "rôle lecture : pas d'export -> 403" "$(code -b $TMP/r $B/export/contacts)" 403
+check "droits modifiés : effet immédiat" "$(curl -s -b $TMP/a -X PATCH $B/roles/$RO_ID -H "$J" -d '{"permissions":["contacts.view","contacts.create"]}' >/dev/null; code -b $TMP/r -X POST $B/contacts -H "$J" -d '{"firstName":"A","lastName":"Droit"}')" 201
+check "rôle attribué non supprimable -> 409" "$(code -b $TMP/a -X DELETE $B/roles/$RO_ID)" 409
+check "rôle Administrateur non supprimable -> 409" "$(code -b $TMP/a -X DELETE $B/roles/role_admin)" 409
+check "admin garde ses droits d'administration" "$(curl -s -b $TMP/a -X PATCH $B/roles/role_admin -H "$J" -d '{"permissions":[]}' | pick 'd=>d.permissions.sort().join(",")')" "admin.roles,admin.users"
+curl -s -b $TMP/a -X PATCH $B/roles/role_admin -H "$J" -d "{\"permissions\":$(curl -s -b $TMP/a $B/roles/catalog | pick 'd=>JSON.stringify(d.modules.flatMap(m=>m.actions.map(a=>a.key)))')}" >/dev/null
+check "droits complets de l'admin restaurés" "$(curl -s -b $TMP/a $B/auth/me | pick 'd=>d.permissions.length')" 33
+check "admin ne se retire pas son rôle -> 400" "$(code -b $TMP/a -X PATCH $B/users/$(curl -s -b $TMP/a $B/auth/me | pick 'd=>d.id') -H "$J" -d '{"roleId":"role_sales"}')" 400
 
 exit $FAIL

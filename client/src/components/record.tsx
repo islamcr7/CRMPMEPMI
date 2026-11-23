@@ -83,7 +83,9 @@ export function StagePath({
   onWin,
   onLose,
   onReopen,
+  readOnly,
 }: {
+  readOnly?: boolean;
   steps: PathStep[];
   current: string;
   /** Issue finale (ex. Gagnée / Perdue) : toutes les étapes sont alors terminées */
@@ -157,7 +159,7 @@ export function StagePath({
           )}
         </ol>
         <div className="flex shrink-0 flex-wrap gap-2">
-          {final ? (
+          {readOnly ? null : final ? (
             onReopen && (
               <Button variant="secondary" onClick={onReopen} loading={pending}>
                 {t("Rouvrir")}
@@ -309,10 +311,13 @@ export function InlineField({
 }
 
 /** Enregistre un champ d'une fiche (PATCH) et rafraîchit les données. */
-export function useFieldSaver(path: string) {
+export function useFieldSaver(path: string, enabled = true) {
   const qc = useQueryClient();
+  // Sans droit de modification : pas de fonction d'enregistrement, donc pas de crayon
   return (field: string, transform: (v: string) => unknown = (v) => (v === '' ? null : v)) =>
-    async (v: string) => {
+    !enabled
+      ? undefined
+      : async (v: string) => {
       await api(path, 'PATCH', { [field]: transform(v) });
       await qc.invalidateQueries();
       toast.success(t('Modification enregistrée'));

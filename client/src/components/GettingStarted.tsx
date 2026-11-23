@@ -5,18 +5,18 @@ import { useAuth } from '../lib/auth';
 import type { Dashboard } from '../types';
 
 import { t } from '../lib/i18n';
-const STEPS: { key: keyof Dashboard['setup']; label: string; hint: string; to: string; admin?: boolean }[] = [
-  { key: 'orgConfigured', label: t('Renseigner votre entreprise'), hint: t('Nom, adresse, TVA : repris sur vos devis et factures'), to: '/settings', admin: true },
-  { key: 'contacts', label: t('Ajouter ou importer vos contacts'), hint: t('Import CSV depuis Excel ou un autre CRM'), to: '/contacts' },
-  { key: 'products', label: t('Créer votre catalogue'), hint: t('Vos produits et prestations, réutilisables dans les devis'), to: '/products' },
-  { key: 'deals', label: t('Suivre une première opportunité'), hint: t('Faites-la avancer étape par étape dans le pipeline'), to: '/pipeline' },
-  { key: 'quotes', label: t('Envoyer un premier devis'), hint: t('Transformez-le en facture en un clic une fois accepté'), to: '/documents/new/QUOTE' },
-  { key: 'team', label: t('Inviter votre équipe'), hint: t('Chaque commercial a son propre accès'), to: '/users', admin: true },
+const STEPS: { key: keyof Dashboard['setup']; label: string; hint: string; to: string; perm: string }[] = [
+  { key: 'orgConfigured', label: t('Renseigner votre entreprise'), hint: t('Nom, adresse, TVA : repris sur vos devis et factures'), to: '/settings', perm: 'admin.settings' },
+  { key: 'contacts', label: t('Ajouter ou importer vos contacts'), hint: t('Import CSV depuis Excel ou un autre CRM'), to: '/contacts', perm: 'contacts.create' },
+  { key: 'products', label: t('Créer votre catalogue'), hint: t('Vos produits et prestations, réutilisables dans les devis'), to: '/products', perm: 'products.manage' },
+  { key: 'deals', label: t('Suivre une première opportunité'), hint: t('Faites-la avancer étape par étape dans le pipeline'), to: '/pipeline', perm: 'deals.create' },
+  { key: 'quotes', label: t('Envoyer un premier devis'), hint: t('Transformez-le en facture en un clic une fois accepté'), to: '/documents/new/QUOTE', perm: 'quotes.create' },
+  { key: 'team', label: t('Inviter votre équipe'), hint: t('Chaque commercial a son propre accès'), to: '/users', perm: 'admin.users' },
 ];
 
 /** Guide « Premiers pas » : se masque une fois terminé ou fermé. */
 export function GettingStarted({ setup }: { setup: Dashboard['setup'] }) {
-  const { user } = useAuth();
+  const { user, can } = useAuth();
   const storageKey = `crm-onboarding-hidden-${user?.id}`;
   const [hidden, setHidden] = useState(() => {
     try {
@@ -26,7 +26,8 @@ export function GettingStarted({ setup }: { setup: Dashboard['setup'] }) {
     }
   });
 
-  const steps = STEPS.filter((s) => !s.admin || user?.role === 'ADMIN');
+  // Seules les étapes que le rôle peut réaliser sont proposées
+  const steps = STEPS.filter((s) => can(s.perm));
   const done = steps.filter((s) => setup[s.key]).length;
   if (hidden || done === steps.length) return null;
 
