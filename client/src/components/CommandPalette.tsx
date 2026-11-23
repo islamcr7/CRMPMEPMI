@@ -16,6 +16,7 @@ import {
   Package,
   Receipt,
   Search,
+  Sparkles,
   Settings,
   ShieldCheck,
   Sun,
@@ -97,6 +98,7 @@ export function CommandPalette({ open, onClose, setTheme }: { open: boolean; onC
       { key: 'p-users', icon: Users, title: t('Utilisateurs'), keywords: t('equipe admin'), run: go('/users'), perm: 'admin.users' },
       { key: 'p-roles', icon: ShieldCheck, title: t('Rôles & droits'), keywords: t('permissions acces securite'), run: go('/roles'), perm: 'admin.roles' },
       { key: 'p-settings', icon: Settings, title: t('Paramètres'), keywords: t('entreprise tva devise'), run: go('/settings'), perm: 'admin.settings' },
+      { key: 'a-assistant', icon: Sparkles, title: t('Ouvrir l’assistant IA'), keywords: t('ia ai chat question aide copilote'), run: () => window.dispatchEvent(new Event('crm:assistant-open')), perm: 'ai.use' },
       { key: 't-dark', icon: Moon, title: t('Passer en thème sombre'), keywords: t('mode nuit dark'), run: () => setTheme('dark') },
       { key: 't-light', icon: Sun, title: t('Passer en thème clair'), keywords: t('mode jour light'), run: () => setTheme('light') },
       getLang() === 'fr'

@@ -82,7 +82,7 @@ check "commercial (ses fiches) ne voit pas la fiche d'un autre -> 404" "$(code -
 check "entreprise avec factures non supprimable -> 409" "$(code -b $TMP/a -X DELETE $B/companies/$CO)" 409
 
 echo "Rôles & visibilité"
-check "5 rôles livrés par défaut" "$(curl -s -b $TMP/a $B/roles | pick 'd=>d.length')" 5
+check "5 rôles livrés par défaut présents" "$(curl -s -b $TMP/a $B/roles | pick 'd=>["role_admin","role_manager","role_sales","role_accountant","role_readonly"].every(id=>d.some(r=>r.id===id))')" true
 check "commercial : portée « ses fiches » dans /auth/me" "$(curl -s -b $TMP/s $B/auth/me | pick 'd=>d.roleName+":"+d.scope')" "Commercial:OWN"
 ADMIN_CONTACTS=$(curl -s -b $TMP/a "$B/contacts?pageSize=100" | pick 'd=>d.total')
 SALES_ME=$(curl -s -b $TMP/s $B/auth/me | pick 'd=>d.id')
@@ -108,7 +108,7 @@ check "rôle attribué non supprimable -> 409" "$(code -b $TMP/a -X DELETE $B/ro
 check "rôle Administrateur non supprimable -> 409" "$(code -b $TMP/a -X DELETE $B/roles/role_admin)" 409
 check "admin garde ses droits d'administration" "$(curl -s -b $TMP/a -X PATCH $B/roles/role_admin -H "$J" -d '{"permissions":[]}' | pick 'd=>d.permissions.sort().join(",")')" "admin.roles,admin.users"
 curl -s -b $TMP/a -X PATCH $B/roles/role_admin -H "$J" -d "{\"permissions\":$(curl -s -b $TMP/a $B/roles/catalog | pick 'd=>JSON.stringify(d.modules.flatMap(m=>m.actions.map(a=>a.key)))')}" >/dev/null
-check "droits complets de l'admin restaurés" "$(curl -s -b $TMP/a $B/auth/me | pick 'd=>d.permissions.length')" 33
+check "droits complets de l'admin restaurés" "$(curl -s -b $TMP/a $B/auth/me | pick 'd=>d.permissions.length')" "$(curl -s -b $TMP/a $B/roles/catalog | pick 'd=>d.modules.flatMap(m=>m.actions).length')"
 check "admin ne se retire pas son rôle -> 400" "$(code -b $TMP/a -X PATCH $B/users/$(curl -s -b $TMP/a $B/auth/me | pick 'd=>d.id') -H "$J" -d '{"roleId":"role_sales"}')" 400
 
 exit $FAIL

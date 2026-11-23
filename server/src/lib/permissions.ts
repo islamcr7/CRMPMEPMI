@@ -17,6 +17,7 @@ export const ACTION_LABELS: Record<string, string> = {
   users: 'Gérer les utilisateurs',
   roles: 'Gérer les rôles',
   settings: 'Modifier les paramètres',
+  use: 'Utiliser l’assistant',
 };
 
 export const MODULES = [
@@ -28,6 +29,7 @@ export const MODULES = [
   { key: 'invoices', label: 'Factures', actions: ['view', 'create', 'edit', 'delete', 'payments', 'credit'] },
   { key: 'products', label: 'Produits', actions: ['view', 'manage'] },
   { key: 'data', label: 'Import / export', actions: ['import', 'export'] },
+  { key: 'ai', label: 'Assistant IA', actions: ['use'] },
   { key: 'admin', label: 'Administration', actions: ['users', 'roles', 'settings'] },
 ] as const;
 
@@ -64,7 +66,7 @@ export const DEFAULT_ROLES = [
       crud('activities'),
       crud('quotes'),
       crud('invoices', ['view', 'create', 'edit', 'payments']),
-      ['products.view', 'products.manage', 'data.import', 'data.export'],
+      ['products.view', 'products.manage', 'data.import', 'data.export', 'ai.use'],
     ),
   },
   {
@@ -79,7 +81,7 @@ export const DEFAULT_ROLES = [
       crud('deals'),
       crud('activities'),
       crud('quotes'),
-      ['invoices.view', 'invoices.create', 'invoices.edit', 'products.view', 'data.import', 'data.export'],
+      ['invoices.view', 'invoices.create', 'invoices.edit', 'products.view', 'data.import', 'data.export', 'ai.use'],
     ),
   },
   {
@@ -91,7 +93,7 @@ export const DEFAULT_ROLES = [
     permissions: pick(
       ['companies.view', 'contacts.view', 'deals.view', 'activities.view', 'activities.create', 'quotes.view'],
       crud('invoices', ['view', 'create', 'edit', 'delete', 'payments', 'credit']),
-      ['products.view', 'products.manage', 'data.export'],
+      ['products.view', 'products.manage', 'data.export', 'ai.use'],
     ),
   },
   {
@@ -100,7 +102,7 @@ export const DEFAULT_ROLES = [
     description: 'Consulte toutes les fiches sans pouvoir rien modifier',
     scope: 'ALL' as const,
     system: false,
-    permissions: pick(views),
+    permissions: pick(views, ['ai.use']),
   },
 ];
 

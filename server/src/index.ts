@@ -22,6 +22,7 @@ import productRoutes from './routes/products.js';
 import collectionRoutes from './routes/collections.js';
 import counterRoutes from './routes/counters.js';
 import roleRoutes from './routes/roles.js';
+import agentRoutes from './routes/agent.js';
 import { exportRouter, importRouter } from './routes/csv.js';
 
 const app = express();
@@ -51,6 +52,7 @@ app.use('/api/counters', requireAuth, counterRoutes);
 app.use('/api/export', requireAuth, requirePerm('data.export'), exportRouter);
 app.use('/api/import', requireAuth, requirePerm('data.import'), importRouter);
 app.use('/api/roles', requireAuth, roleRoutes);
+app.use('/api/agent', requireAuth, agentRoutes);
 
 app.use('/api', (_req, res) => {
   res.status(404).json({ error: 'Route inconnue' });

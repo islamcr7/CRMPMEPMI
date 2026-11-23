@@ -48,6 +48,7 @@ Comptes de démonstration (mots de passe dans `server/.env`) :
   - Cinq rôles sont livrés : Administrateur, Manager, Commercial (ses fiches), Comptable, Lecture seule.
   - Le serveur contrôle chaque action ; l'interface masque ce qui n'est pas autorisé. Un changement de droits s'applique immédiatement.
   - Garde-fous : le rôle Administrateur ne peut être ni supprimé ni privé de la gestion des utilisateurs et des rôles, et il reste toujours au moins un administrateur actif.
+- **Assistant IA** (bouton ✨ en bas à droite, ou `Ctrl+J`) : répond aux questions sur vos données, propose des actions, rédige des emails et des relances, analyse le pipeline et donne des conseils. Détails dans la section [Assistant IA](#assistant-ia).
 - **Utilisateurs & rôles** : *Administrateur* (gestion des utilisateurs et des paramètres, suppression de toute fiche) et *Commercial* (accès à toutes les fiches, suppression uniquement des siennes).
 - **Paramètres** : identité de l'entreprise (en-tête des documents), devise (EUR, DZD, MAD, TND, XOF…), TVA par défaut, délai de paiement, RIB, pied de page.
 
@@ -88,6 +89,27 @@ DATABASE_URL="postgresql://crm:crm@localhost:5433/crm_test?schema=public" API_PO
 # dans un autre terminal :
 bash scripts/smoke-test.sh http://localhost:4100/api
 ```
+
+## Assistant IA
+
+L'assistant fonctionne avec tout fournisseur compatible avec l'API OpenAI (`/chat/completions` avec outils) : OpenAI, Mistral, Groq, OpenRouter, DeepSeek, Azure OpenAI, ou un modèle local via Ollama ou LM Studio. Le modèle doit gérer l'appel d'outils (*tool calling*).
+
+Renseignez trois variables dans `server/.env` (ou dans le tableau de bord Render pour la démo), puis redémarrez l'API :
+
+```
+AI_API_KEY="votre-clé"
+AI_BASE_URL="https://api.openai.com/v1"   # adresse du fournisseur, jusqu'à /v1
+AI_MODEL="nom-du-modèle"
+```
+
+Variables facultatives : `AI_MAX_STEPS` (appels d'outils par question, 8 par défaut) et `AI_TIMEOUT_MS` (60000 par défaut). Sans configuration, le panneau affiche « Assistant non configuré ».
+
+Fonctionnement :
+- L'assistant consulte le CRM **avec les droits de l'utilisateur connecté** : il ne voit que ce que l'utilisateur voit (portée « ses fiches » comprise).
+- Il peut créer une tâche ou un rendez-vous, mettre à jour une opportunité ou créer un contact, mais **chaque action doit être confirmée** dans le panneau. Rien n'est écrit sans un clic sur « Confirmer ».
+- Le droit **Assistant IA → Utiliser l'assistant** (Rôles & droits) contrôle l'accès ; il est activé pour les cinq rôles livrés.
+- Les questions et les données consultées sont envoyées au fournisseur choisi : vérifiez ses conditions avant d'utiliser des données réelles.
+- Limite : 40 requêtes par utilisateur toutes les 10 minutes.
 
 ## Démo en ligne gratuite (Render)
 

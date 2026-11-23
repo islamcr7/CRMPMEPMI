@@ -32,3 +32,10 @@ services:
         sync: false
       - key: SEED_SALES_PASSWORD
         sync: false
+      # Assistant IA (fournisseur compatible OpenAI) : à renseigner dans le tableau de bord Render
+      - key: AI_API_KEY
+        sync: false
+      - key: AI_BASE_URL
+        sync: false
+      - key: AI_MODEL
+        sync: false

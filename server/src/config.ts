@@ -7,7 +7,18 @@ export const config = {
   jwtSecret: process.env.JWT_SECRET ?? '',
   isProd: process.env.NODE_ENV === 'production',
   tokenTtlDays: 7,
+  /** Assistant IA : fournisseur compatible « OpenAI » (chat/completions avec outils) */
+  ai: {
+    apiKey: process.env.AI_API_KEY ?? '',
+    baseUrl: (process.env.AI_BASE_URL ?? '').replace(/\/+$/, ''),
+    model: process.env.AI_MODEL ?? '',
+    /** Nombre maximal d'allers-retours modèle ↔ outils par message */
+    maxSteps: Number(process.env.AI_MAX_STEPS ?? 8),
+    timeoutMs: Number(process.env.AI_TIMEOUT_MS ?? 60_000),
+  },
 };
+
+export const aiConfigured = () => !!(config.ai.baseUrl && config.ai.model);
 
 if (!config.jwtSecret || config.jwtSecret.length < 16) {
   throw new Error('JWT_SECRET manquant ou trop court dans server/.env');

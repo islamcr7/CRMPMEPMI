@@ -682,6 +682,44 @@ export const EN: Record<string, string> = {
   'Le rôle Administrateur voit toujours toutes les fiches': 'The Administrator role always sees all records',
   'Le rôle Administrateur ne peut pas être supprimé': 'The Administrator role cannot be deleted',
 
+  /* ---------- Assistant IA ---------- */
+  'Assistant IA': 'AI assistant',
+  'Assistant': 'Assistant',
+  'Ouvrir l’assistant IA': 'Open the AI assistant',
+  'Assistant IA (Ctrl+J)': 'AI assistant (Ctrl+J)',
+  'ia ai chat question aide copilote': 'ai chat question help copilot assistant',
+  'Votre copilote commercial': 'Your sales copilot',
+  'Nouvelle conversation': 'New conversation',
+  'Assistant non configuré': 'Assistant not configured',
+  'L’administrateur doit renseigner la clé API, l’adresse et le modèle du fournisseur IA (AI_API_KEY, AI_BASE_URL, AI_MODEL) dans la configuration du serveur.':
+    'An administrator must set the AI provider’s API key, address and model (AI_API_KEY, AI_BASE_URL, AI_MODEL) in the server configuration.',
+  'Bonjour {name}, comment puis-je vous aider ?': 'Hi {name}, how can I help?',
+  'Je consulte vos données CRM, prépare des actions et rédige vos messages. Je vous demande toujours confirmation avant de modifier quoi que ce soit.':
+    'I look up your CRM data, prepare actions and draft your messages. I always ask for your confirmation before changing anything.',
+  'Copier': 'Copy',
+  'Copié dans le presse-papiers': 'Copied to clipboard',
+  'Copie impossible': 'Could not copy',
+  'Action à confirmer': 'Action to confirm',
+  'L’assistant réfléchit…': 'The assistant is thinking…',
+  'Répondez, ou confirmez l’action ci-dessus…': 'Reply, or confirm the action above…',
+  'Posez une question ou demandez une action…': 'Ask a question or request an action…',
+  'Message pour l’assistant': 'Message to the assistant',
+  'Envoyer': 'Send',
+  'L’IA peut se tromper : vérifiez les informations importantes.': 'AI can make mistakes: double-check important information.',
+  // Suggestions de départ (passées à t() via une variable)
+  'Quelles sont mes priorités aujourd’hui ?': 'What are my priorities today?',
+  'Quelles factures sont en retard de paiement ?': 'Which invoices are overdue?',
+  'Résume l’état de mon pipeline': 'Summarize my pipeline',
+  'Quelles opportunités risquent de ne pas aboutir ?': 'Which opportunities are at risk?',
+  // Droit et messages de l'API
+  'Utiliser l’assistant': 'Use the assistant',
+  'Le fournisseur IA est injoignable': 'The AI provider is unreachable',
+  'Réponse inattendue du fournisseur IA': 'Unexpected response from the AI provider',
+  'Aucune action en attente de confirmation': 'No action is awaiting confirmation',
+  'Trop de demandes à l’assistant, réessayez dans quelques minutes': 'Too many requests to the assistant, please try again in a few minutes',
+  'Assistant IA non configuré : renseignez AI_BASE_URL et AI_MODEL (et AI_API_KEY) dans la configuration du serveur':
+    'AI assistant not configured: set AI_BASE_URL and AI_MODEL (and AI_API_KEY) in the server configuration',
+
   /* ---------- Divers ---------- */
   'Bonjour {name} 👋': 'Hello {name} 👋',
   'Paiements ({n})': 'Payments ({n})',

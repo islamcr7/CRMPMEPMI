@@ -6,6 +6,7 @@ import { useTheme, type ThemePref } from '../lib/theme';
 import { CommandPalette } from './CommandPalette';
 import { NewMenu } from './NewMenu';
 import { Sidebar } from './Sidebar';
+import { Assistant } from './Assistant';
 import { LangSwitch } from './LangSwitch';
 
 import { t } from '../lib/i18n';
@@ -39,7 +40,7 @@ function ThemeSwitch({ value, onChange }: { value: ThemePref; onChange: (t: Them
 }
 
 export function Layout() {
-  const { logout } = useAuth();
+  const { logout, can } = useAuth();
   const [open, setOpen] = useState(false);
   const [palette, setPalette] = useState(false);
   const [theme, setTheme] = useTheme();
@@ -133,6 +134,7 @@ export function Layout() {
       </div>
 
       <CommandPalette open={palette} onClose={() => setPalette(false)} setTheme={setTheme} />
+      {can('ai.use') && <Assistant />}
     </div>
   );
 }
